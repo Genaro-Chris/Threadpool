@@ -1,3 +1,4 @@
+import ConcurrencyPrimitives
 import Foundation
 
 public final class SingleThread: @unchecked Sendable {
@@ -13,15 +14,15 @@ public final class SingleThread: @unchecked Sendable {
 
     private let waitType: WaitType
 
-    private let semaphore: DispatchSemaphore
+    private let barrier: Barrier
 
-    /// 
-    /// - Parameter waitType: 
+    ///
+    /// - Parameter waitType:
     public init(waitType: WaitType = .waitForAll) {
         self.waitType = waitType
         queue = ThreadSafeQueue()
-        semaphore = DispatchSemaphore(value: 0)
-        handle = start(queue: queue, semaphore: semaphore)
+        barrier = Barrier(value: 2)!
+        handle = start(queue: queue, barrier: barrier)
     }
 
     private func end() {
@@ -30,7 +31,7 @@ public final class SingleThread: @unchecked Sendable {
 
     private func waitForAll() {
         queue <- .wait
-        semaphore.wait()
+        barrier.arriveAndWait()
     }
 
     public func submit(_ body: @escaping () -> Void) {
@@ -48,13 +49,13 @@ public final class SingleThread: @unchecked Sendable {
     }
 }
 
-private func start(queue: ThreadSafeQueue<QueueOperation>, semaphore: DispatchSemaphore) -> Thread {
-    let thread = Thread { [queue, semaphore] in
-        for op in queue {
+private func start(queue: ThreadSafeQueue<QueueOperation>, barrier: Barrier) -> Thread {
+    let thread = Thread { [queue, barrier] in
+        while let op = queue.next() {
             switch (op, Thread.current.isCancelled) {
                 case let (.ready(work), false): work()
                 case (.wait, false):
-                    semaphore.signal()
+                    barrier.arriveAndWait()
                 case (.notYet, false): continue
                 default: return
             }

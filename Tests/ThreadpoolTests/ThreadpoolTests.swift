@@ -1,5 +1,6 @@
 import XCTest
 
+@testable import ConcurrencyPrimitives
 @testable import ThreadPool
 
 final class ThreadpoolTests: XCTestCase {
@@ -174,8 +175,8 @@ final class ThreadpoolTests: XCTestCase {
                 pool?.submit {
                     lock.withLock {
                         counter += i
-                        Thread.sleep(forTimeInterval: 1)
                     }
+                    Thread.sleep(forTimeInterval: 1)
                 }
             }
         }
@@ -250,8 +251,8 @@ final class ThreadpoolTests: XCTestCase {
                 pool?.submit {
                     lock.withLock {
                         counter += i
-                        Thread.sleep(forTimeInterval: 2)
                     }
+                    Thread.sleep(forTimeInterval: 2)
                 }
             }
 
@@ -279,8 +280,8 @@ final class ThreadpoolTests: XCTestCase {
                 pool?.submit {
                     lock.withLock {
                         counter += i
-                        Thread.sleep(forTimeInterval: 2)
                     }
+                    Thread.sleep(forTimeInterval: 2)
                 }
             }
         }
@@ -352,9 +353,9 @@ final class ThreadpoolTests: XCTestCase {
             for i in 1 ... 10 {
                 pool.submit {
                     lock.withLock {
-                        Thread.sleep(forTimeInterval: 1)
                         counter += i
                     }
+                    Thread.sleep(forTimeInterval: 1)
                 }
             }
         }

@@ -23,12 +23,12 @@ public class ThreadSafeQueue<Element>: @unchecked Sendable {
     }
 
     private var buffer: [Element] = []
-    private let lock = Mutex()
+    private let mutex = Mutex()
 
     ///
     /// - Parameter item:
     public func enqueue(_ item: Element) {
-        lock.withLock {
+        mutex.withLock {
             buffer.append(item)
         }
     }
@@ -36,7 +36,7 @@ public class ThreadSafeQueue<Element>: @unchecked Sendable {
     ///
     /// - Returns:
     public func dequeue() -> Element? {
-        return lock.withLock {
+        return mutex.withLock {
             guard !buffer.isEmpty else {
                 return nil
             }

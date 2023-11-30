@@ -1,3 +1,4 @@
+import ConcurrencyPrimitives
 import Foundation
 
 ///
@@ -44,7 +45,7 @@ public final class ThreadPool: @unchecked Sendable {
     }
 
     private func waitForAll() {
-        DispatchQueue.concurrentPerform(iterations: count) { _ in
+        (0 ..< count).forEach { _ in
             queue <- .wait
         }
         barrier.arriveAndWait()
@@ -66,7 +67,7 @@ private func start(
 ) -> [Thread] {
     let threadHandles = (0 ..< count).map { _ in
         Thread {
-            for op in queue {
+            while let op = queue.next() {
                 switch (op, Thread.current.isCancelled) {
                     case let (.ready(work), false): work()
                     case (.ready(_), true): return
