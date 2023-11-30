@@ -44,7 +44,7 @@ public final class ThreadPool: @unchecked Sendable {
     }
 
     private func waitForAll() {
-        (0 ..< count).forEach { _ in
+        DispatchQueue.concurrentPerform(iterations: count) { _ in
             queue <- .wait
         }
         barrier.arriveAndWait()

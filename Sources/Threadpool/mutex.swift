@@ -1,14 +1,17 @@
 import Foundation
 
-public class Mutex {
+public class Mutex: @unchecked Sendable {
 
     var mutex: pthread_mutex_t
     private var mutexAttr: pthread_mutexattr_t
 
+    ///
     public enum MutexType {
         case normal, recursive
     }
 
+    /// 
+    /// - Parameter type: 
     public init(type: MutexType = .normal) {
         mutex = pthread_mutex_t()
         mutexAttr = pthread_mutexattr_t()
@@ -28,18 +31,26 @@ public class Mutex {
         pthread_mutex_destroy(&mutex)
     }
 
+    ///
     public func lock() {
         pthread_mutex_lock(&mutex)
     }
 
+    /// 
+    /// - Returns: 
     public func tryLock() -> Int32 {
         pthread_mutex_trylock(&mutex)
     }
 
+    ///
     public func unlock() {
         pthread_mutex_unlock(&mutex)
     }
 
+    /// 
+    /// - Parameter body: 
+    /// - Returns: 
+    @discardableResult
     public func withLock<T>(_ body: () throws -> T) rethrows -> T {
         lock()
         defer { unlock() }

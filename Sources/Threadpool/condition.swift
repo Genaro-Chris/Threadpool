@@ -1,6 +1,6 @@
 import Foundation
 
-public class Condition {
+public class Condition: @unchecked Sendable {
     private var condition: pthread_cond_t
     private var conditionAttr: pthread_condattr_t
     public init() {

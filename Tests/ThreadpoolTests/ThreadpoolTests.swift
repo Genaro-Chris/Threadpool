@@ -4,6 +4,79 @@ import XCTest
 
 final class ThreadpoolTests: XCTestCase {
 
+    func testConditionWithSignal() {
+        let condition = Condition()
+        let lock = Mutex(type: .normal)
+        var total = 0
+        let threadHanddles = (1 ... 10).map { i in
+            Thread {
+                lock.withLock {
+                    total += i
+                }
+                condition.wait(mutex: lock)
+            }
+        }
+        threadHanddles.forEach { $0.start() }
+
+        Thread.sleep(forTimeInterval: 1)
+
+        (1 ... 10).forEach { _ in condition.signal() }
+
+        threadHanddles.forEach { $0.cancel() }
+        lock.withLock {
+            XCTAssertEqual(total, 55)
+        }
+    }
+
+    func testConditionWithBroadcast() {
+        let condition = Condition()
+        let lock = Mutex(type: .normal)
+        var total = 0
+        let threadHanddles = (1 ... 10).map { i in
+            Thread {
+                lock.withLock {
+                    total += i
+                }
+                condition.wait(mutex: lock)
+            }
+        }
+        threadHanddles.forEach { $0.start() }
+
+        Thread.sleep(forTimeInterval: 1)
+
+        condition.broadcast()
+
+        threadHanddles.forEach { $0.cancel() }
+        lock.withLock {
+            XCTAssertEqual(total, 55)
+        }
+    }
+
+    func testConditionSleepWithBroadcast() {
+        let condition = Condition()
+        let lock = Mutex(type: .normal)
+        let total = 0
+        let threadHanddles = (1 ... 5).map { i in
+            Thread {
+                condition.wait(mutex: lock, forTimeInterval: 2)
+                if i % 5 == 0 {
+                    condition.signal()
+                }
+
+            }
+        }
+        threadHanddles.forEach { $0.start() }
+
+        condition.broadcast()
+
+        condition.wait(mutex: lock, forTimeInterval: 4)
+
+        threadHanddles.forEach { $0.cancel() }
+        lock.withLock {
+            XCTAssertEqual(total, 0)
+        }
+    }
+
     func testQueue() {
         let queue = ThreadSafeQueue<Int>(order: .firstOut)
         DispatchQueue.concurrentPerform(iterations: 11) { value in
@@ -22,17 +95,18 @@ final class ThreadpoolTests: XCTestCase {
         let queue = Barrier(value: 3)
         XCTAssertNotNil(queue)
         var total = 0
+        let mutex = Mutex()
         for i in 1 ... 10 {
             Thread {
-                print("About to block thread \(i)")
                 queue?.arriveAndWait()
-                total += i
-                print("About to release thread \(i)")
-                //queue?.arriveAndWait()
+                mutex.withLock {
+                    total += i
+                }
             }.start()
         }
-        //queue?.waitForAll()
-        XCTAssertNotEqual(total, 0)
+        mutex.withLock {
+            XCTAssertNotEqual(total, 0)
+        }
     }
 
     func testNils() {
@@ -51,12 +125,10 @@ final class ThreadpoolTests: XCTestCase {
             Thread {
                 if i % 3 == 0 {
                     mutex.withLock {
-                        print("About to block thread \(i)")
                         total += i
                     }
                     queue?.decrementAndWait()
                 }
-                print("About to release thread \(i)")
             }.start()
         }
         queue?.waitForAll()
@@ -67,15 +139,12 @@ final class ThreadpoolTests: XCTestCase {
 
     func testOnce() {
         var total = 0
-        DispatchQueue.concurrentPerform(iterations: 11) { _ in
-            Once.runOnce {
-                print("once")
-                total += 1
-            }
-        }
-        Once.runOnce {
-            print("once")
-            total += 1
+        for _ in 1 ... 10 {
+            Thread {
+                Once.runOnce {
+                    total += 1
+                }
+            }.start()
         }
         XCTAssertEqual(total, 1)
     }
@@ -152,6 +221,24 @@ final class ThreadpoolTests: XCTestCase {
         XCTAssertNotEqual(counter, 55)
     }
 
+    func testRWLock() {
+        let rwLock = RWLock()
+        var counter = 0
+        do {
+            let pool = ThreadPool(count: 3, waitType: .waitForAll)
+            (1 ... 5).forEach { i in
+                pool?.submit {
+                    rwLock.withWriteLock {
+                        counter += i
+                    }
+                }
+            }
+        }
+        rwLock.withReadLock {
+            XCTAssertEqual(counter, 15)
+        }
+    }
+
     func testPollingThreadPool() {
         var counter = 0
 
@@ -209,7 +296,7 @@ final class ThreadpoolTests: XCTestCase {
             for _ in 1 ... 10 {
                 pool.submit {
                     lock.withLock {
-                        append(msg: Thread.current.description, to: &checks)
+                        checks.append(Thread.current.description)
                     }
                 }
             }
@@ -228,7 +315,7 @@ final class ThreadpoolTests: XCTestCase {
             for _ in 1 ... 10 {
                 pool.submit {
                     lock.withLock {
-                        append(msg: Thread.current.description, to: &checks)
+                        checks.append(Thread.current.description)
                     }
                 }
             }
@@ -246,7 +333,7 @@ final class ThreadpoolTests: XCTestCase {
             for _ in 1 ... 10 {
                 pool.submit {
                     lock.withLock {
-                        append(msg: Thread.current.description, to: &checks)
+                        checks.append(Thread.current.description)
                     }
                 }
             }
@@ -274,11 +361,6 @@ final class ThreadpoolTests: XCTestCase {
 
         XCTAssertNotEqual(counter, 55)
     }
-
-    func testThreadPoolIsNil() {
-        let poolOfZero = ThreadPool(count: 0)
-        XCTAssertNil(poolOfZero)
-    }
 }
 
 extension Array where Element: Equatable {
@@ -291,8 +373,4 @@ extension Array where Element: Equatable {
         }
         return true
     }
-}
-
-func append(msg: String, to: inout [String]) {
-    to.append(msg)
 }

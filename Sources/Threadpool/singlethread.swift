@@ -1,6 +1,6 @@
 import Foundation
 
-public final class SingleThread {
+public final class SingleThread: @unchecked Sendable {
 
     private let handle: Thread
 
