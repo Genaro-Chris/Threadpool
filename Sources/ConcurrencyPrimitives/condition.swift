@@ -1,6 +1,6 @@
 import Foundation
 
-public class Condition: @unchecked Sendable {
+public final class Condition: @unchecked Sendable {
     private let condition: UnsafeMutablePointer<pthread_cond_t>
     private let conditionAttr: UnsafeMutablePointer<pthread_condattr_t>
     public init() {
@@ -12,8 +12,10 @@ public class Condition: @unchecked Sendable {
     }
 
     deinit {
-        pthread_condattr_destroy(conditionAttr)
-        pthread_cond_destroy(condition)
+        conditionAttr.deinitialize(count: 1)
+        condition.deinitialize(count: 1)
+        conditionAttr.deallocate()
+        condition.deallocate()
     }
     ///
     /// - Parameters:

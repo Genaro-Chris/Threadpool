@@ -4,7 +4,7 @@ prefix operator <-
 infix operator <-
 
 ///
-public class ThreadSafeQueue<Element>: @unchecked Sendable {
+public final class ThreadSafeQueue<Element>: @unchecked Sendable {
 
     ///
     public enum Order {
@@ -28,7 +28,7 @@ public class ThreadSafeQueue<Element>: @unchecked Sendable {
     ///
     /// - Parameter item:
     public func enqueue(_ item: Element) {
-        mutex.withLock {
+        mutex.whileLocked {
             buffer.append(item)
         }
     }
@@ -36,7 +36,7 @@ public class ThreadSafeQueue<Element>: @unchecked Sendable {
     ///
     /// - Returns:
     public func dequeue() -> Element? {
-        return mutex.withLock {
+        return mutex.whileLocked {
             guard !buffer.isEmpty else {
                 return nil
             }

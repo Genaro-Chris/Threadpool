@@ -8,18 +8,15 @@ final class SerialJobExecutor: SerialExecutor {
         UnownedSerialExecutor(ordinary: self)
     }
 
-    private let queue = ThreadSafeQueue<(UnownedJob, UnownedSerialExecutor)>()
-
     init() {}
 
     private let threadHandle = SingleThread()
 
     func enqueue(_ job: consuming ExecutorJob) {
-        queue <- (UnownedJob(job), asUnownedSerialExecutor())
-        threadHandle.submit { [queue] in
-            guard let (job, executor) = <-queue else {
-                return
-            }
+        let job = UnownedJob(job)
+        let executor = asUnownedSerialExecutor()
+        threadHandle.submit {
+            print(type(of: self), Thread.current)
             job.runSynchronously(on: executor)
         }
     }

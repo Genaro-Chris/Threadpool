@@ -27,8 +27,10 @@ public class Mutex: @unchecked Sendable {
     }
 
     deinit {
-        pthread_mutexattr_destroy(mutexAttr)
-        pthread_mutex_destroy(mutex)
+        mutexAttr.deinitialize(count: 1)
+        mutex.deinitialize(count: 1)
+        mutexAttr.deallocate()
+        mutex.deallocate()
     }
 
     ///
@@ -51,7 +53,8 @@ public class Mutex: @unchecked Sendable {
     /// - Parameter body:
     /// - Returns:
     @discardableResult
-    public func withLock<T>(_ body: () throws -> T) rethrows -> T {
+    @inlinable
+    public func whileLocked<T>(_ body: () throws -> T) rethrows -> T {
         lock()
         defer { unlock() }
         return try body()

@@ -66,7 +66,7 @@ private func start(
     queue: ThreadSafeQueue<QueueOperation>, count: Int, barrier: Barrier
 ) -> [Thread] {
     let threadHandles = (0 ..< count).map { _ in
-        Thread {
+        let thread = Thread {
             while let op = queue.next() {
                 switch (op, Thread.current.isCancelled) {
                     case let (.ready(work), false): work()
@@ -78,7 +78,8 @@ private func start(
                 }
             }
         }
+        thread.start()
+        return thread
     }
-    threadHandles.forEach { $0.start() }
     return threadHandles
 }

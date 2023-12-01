@@ -1,8 +1,8 @@
 import Foundation
 
-actor SpecialActor {
+actor SpecialThreadActor {
 
-    private let executor = SerialJobExecutor()
+    private let executor = MultiThreadedSerialJobExecutor()
 
     nonisolated var unownedExecutor: UnownedSerialExecutor {
         UnownedSerialExecutor(ordinary: executor)

@@ -11,7 +11,7 @@ final class ThreadpoolTests: XCTestCase {
         var total = 0
         let threadHanddles = (1 ... 10).map { i in
             Thread {
-                lock.withLock {
+                lock.whileLocked {
                     total += i
                 }
                 condition.wait(mutex: lock)
@@ -24,7 +24,7 @@ final class ThreadpoolTests: XCTestCase {
         (1 ... 10).forEach { _ in condition.signal() }
 
         threadHanddles.forEach { $0.cancel() }
-        lock.withLock {
+        lock.whileLocked {
             XCTAssertEqual(total, 55)
         }
     }
@@ -35,7 +35,7 @@ final class ThreadpoolTests: XCTestCase {
         var total = 0
         let threadHanddles = (1 ... 10).map { i in
             Thread {
-                lock.withLock {
+                lock.whileLocked {
                     total += i
                 }
                 condition.wait(mutex: lock)
@@ -48,7 +48,7 @@ final class ThreadpoolTests: XCTestCase {
         condition.broadcast()
 
         threadHanddles.forEach { $0.cancel() }
-        lock.withLock {
+        lock.whileLocked {
             XCTAssertEqual(total, 55)
         }
     }
@@ -73,7 +73,7 @@ final class ThreadpoolTests: XCTestCase {
         condition.wait(mutex: lock, forTimeInterval: 4)
 
         threadHanddles.forEach { $0.cancel() }
-        lock.withLock {
+        lock.whileLocked {
             XCTAssertEqual(total, 0)
         }
     }
@@ -100,12 +100,12 @@ final class ThreadpoolTests: XCTestCase {
         for i in 1 ... 10 {
             Thread {
                 queue?.arriveAndWait()
-                mutex.withLock {
+                mutex.whileLocked {
                     total += i
                 }
             }.start()
         }
-        mutex.withLock {
+        mutex.whileLocked {
             XCTAssertNotEqual(total, 0)
         }
     }
@@ -125,7 +125,7 @@ final class ThreadpoolTests: XCTestCase {
         for i in 1 ... 10 {
             Thread {
                 if i % 3 == 0 {
-                    mutex.withLock {
+                    mutex.whileLocked {
                         total += i
                     }
                     queue?.decrementAndWait()
@@ -133,7 +133,7 @@ final class ThreadpoolTests: XCTestCase {
             }.start()
         }
         queue?.waitForAll()
-        mutex.withLock {
+        mutex.whileLocked {
             XCTAssertEqual(total, 18)
         }
     }
@@ -173,7 +173,7 @@ final class ThreadpoolTests: XCTestCase {
             let lock = Mutex()
             for i in 1 ... 10 {
                 pool?.submit {
-                    lock.withLock {
+                    lock.whileLocked {
                         counter += i
                     }
                     Thread.sleep(forTimeInterval: 1)
@@ -193,7 +193,7 @@ final class ThreadpoolTests: XCTestCase {
             let lock = Mutex()
             for i in 1 ... 10 {
                 pool?.submit {
-                    lock.withLock {
+                    lock.whileLocked {
                         counter += i
                     }
                 }
@@ -212,7 +212,7 @@ final class ThreadpoolTests: XCTestCase {
             let lock = Mutex()
             for i in 1 ... 10 {
                 pool?.submit {
-                    lock.withLock {
+                    lock.whileLocked {
                         counter += i
                     }
                 }
@@ -229,13 +229,13 @@ final class ThreadpoolTests: XCTestCase {
             let pool = ThreadPool(count: 3, waitType: .waitForAll)
             (1 ... 5).forEach { i in
                 pool?.submit {
-                    rwLock.withWriteLock {
+                    rwLock.whileWriteLocked {
                         counter += i
                     }
                 }
             }
         }
-        rwLock.withReadLock {
+        rwLock.whileReadLocked {
             XCTAssertEqual(counter, 15)
         }
     }
@@ -249,7 +249,7 @@ final class ThreadpoolTests: XCTestCase {
             let lock = Mutex()
             for i in 1 ... 10 {
                 pool?.submit {
-                    lock.withLock {
+                    lock.whileLocked {
                         counter += i
                     }
                     Thread.sleep(forTimeInterval: 2)
@@ -259,7 +259,7 @@ final class ThreadpoolTests: XCTestCase {
             pool?.poll()
 
             pool?.submit {
-                lock.withLock {
+                lock.whileLocked {
                     XCTAssertEqual(counter, 55)
                     counter += 11
                 }
@@ -278,7 +278,7 @@ final class ThreadpoolTests: XCTestCase {
             let lock = Mutex()
             for i in 1 ... 10 {
                 pool?.submit {
-                    lock.withLock {
+                    lock.whileLocked {
                         counter += i
                     }
                     Thread.sleep(forTimeInterval: 2)
@@ -296,14 +296,16 @@ final class ThreadpoolTests: XCTestCase {
             let lock = Mutex()
             for _ in 1 ... 10 {
                 pool.submit {
-                    lock.withLock {
+                    lock.whileLocked {
                         checks.append(Thread.current.description)
                     }
                 }
             }
         }
 
-        XCTAssert(checks.allEqual())
+        if let first = checks.first {
+            XCTAssert(checks.allSatisfy { $0 == first })
+        }
         XCTAssertEqual(checks.count, 10)
     }
 
@@ -315,13 +317,15 @@ final class ThreadpoolTests: XCTestCase {
 
             for _ in 1 ... 10 {
                 pool.submit {
-                    lock.withLock {
+                    lock.whileLocked {
                         checks.append(Thread.current.description)
                     }
                 }
             }
         }
-        XCTAssert(checks.allEqual())
+        if let first = checks.first {
+            XCTAssert(checks.allSatisfy { $0 == first })
+        }
         XCTAssertNotEqual(checks.count, 10)
     }
 
@@ -333,14 +337,17 @@ final class ThreadpoolTests: XCTestCase {
 
             for _ in 1 ... 10 {
                 pool.submit {
-                    lock.withLock {
+                    lock.whileLocked {
                         checks.append(Thread.current.description)
                     }
                 }
             }
             pool.poll()
         }
-        XCTAssert(checks.allEqual())
+
+        if let first = checks.first {
+            XCTAssert(checks.allSatisfy { $0 == first })
+        }
         XCTAssertEqual(checks.count, 10)
     }
 
@@ -352,7 +359,7 @@ final class ThreadpoolTests: XCTestCase {
 
             for i in 1 ... 10 {
                 pool.submit {
-                    lock.withLock {
+                    lock.whileLocked {
                         counter += i
                     }
                     Thread.sleep(forTimeInterval: 1)
@@ -361,17 +368,5 @@ final class ThreadpoolTests: XCTestCase {
         }
 
         XCTAssertNotEqual(counter, 55)
-    }
-}
-
-extension Array where Element: Equatable {
-
-    func allEqual() -> Bool {
-        if let firstValue = first {
-            return !contains {
-                $0 != firstValue
-            }
-        }
-        return true
     }
 }

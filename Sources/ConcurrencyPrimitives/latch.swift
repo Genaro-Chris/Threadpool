@@ -1,7 +1,7 @@
 import Foundation
 
 ///
-public class Latch: @unchecked Sendable {
+public final class Latch: @unchecked Sendable {
     private let condition = Condition()
     private let mutex = Mutex()
     private var blockedThreadIndex: Int
@@ -17,7 +17,7 @@ public class Latch: @unchecked Sendable {
 
     ///
     public func decrementAndWait() {
-        mutex.withLock {
+        mutex.whileLocked {
             blockedThreadIndex -= 1
             guard blockedThreadIndex == 0 else {
                 condition.wait(
@@ -29,7 +29,7 @@ public class Latch: @unchecked Sendable {
     }
 
     ///
-    /// Warning - This function will deadlock if ``decrementAndWait`` method is called more or less than the value 
+    /// Warning - This function will deadlock if ``decrementAndWait`` method is called more or less than the value passed to the initializer
     public func waitForAll() {
         condition.wait(
             mutex: mutex, condition: blockedThreadIndex == 0)

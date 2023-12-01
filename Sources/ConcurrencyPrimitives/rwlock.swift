@@ -1,7 +1,7 @@
 import Foundation
 
 ///
-public class RWLock: @unchecked Sendable {
+public final class RWLock: @unchecked Sendable {
 
     let rwLock: UnsafeMutablePointer<pthread_rwlock_t>
     let rwLockAttr: UnsafeMutablePointer<pthread_rwlockattr_t>
@@ -32,8 +32,10 @@ public class RWLock: @unchecked Sendable {
     }
 
     deinit {
-        pthread_rwlockattr_destroy(rwLockAttr)
-        pthread_rwlock_destroy(rwLock)
+        rwLockAttr.deinitialize(count: 1)
+        rwLock.deinitialize(count: 1)
+        rwLockAttr.deallocate()
+        rwLock.deallocate()
     }
 
     ///
@@ -67,7 +69,8 @@ public class RWLock: @unchecked Sendable {
     /// - Parameter body:
     /// - Returns:
     @discardableResult
-    public func withReadLock<T>(_ body: () throws -> T) rethrows -> T {
+    @inlinable
+    public func whileReadLocked<T>(_ body: () throws -> T) rethrows -> T {
         readLock()
         defer { unlock() }
         return try body()
@@ -77,7 +80,8 @@ public class RWLock: @unchecked Sendable {
     /// - Parameter body:
     /// - Returns:
     @discardableResult
-    public func withWriteLock<T>(_ body: () throws -> T) rethrows -> T {
+    @inlinable
+    public func whileWriteLocked<T>(_ body: () throws -> T) rethrows -> T {
         writeLock()
         defer { unlock() }
         return try body()

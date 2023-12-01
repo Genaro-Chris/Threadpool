@@ -1,7 +1,7 @@
 import Foundation
 
 ///
-public class Barrier: @unchecked Sendable {
+public final class Barrier: @unchecked Sendable {
     private let condition = Condition()
     private let mutex = Mutex()
     private var blockedThreadIndex = 0
@@ -18,7 +18,7 @@ public class Barrier: @unchecked Sendable {
 
     ///
     public func arriveAndWait() {
-        mutex.withLock {
+        mutex.whileLocked {
             blockedThreadIndex += 1
             guard blockedThreadIndex != threadCount else {
                 blockedThreadIndex = 0

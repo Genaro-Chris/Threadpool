@@ -5,7 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "ExampleUsage",
-    platforms: [.macOS(.v10_15)],
+    platforms: [.macOS(.v12)],
     dependencies: [
         .package(path: "../")
     ],
@@ -16,11 +16,8 @@ let package = Package(
             name: "ExampleUsage",
             dependencies: [
                 .product(name: "ConcurrencyPrimitives", package: "ThreadPool"),
-                .product(name: "ThreadPool", package: "ThreadPool")
+                .product(name: "ThreadPool", package: "ThreadPool"),
             ],
-            path: "Sources/",
-            swiftSettings: [
-                .enableExperimentalFeature("StrictConcurrency=complete")
-            ])
+            path: "Sources/")
     ]
 )
