@@ -21,12 +21,13 @@ public final class SingleThread: @unchecked Sendable {
     public init(waitType: WaitType = .waitForAll) {
         self.waitType = waitType
         queue = ThreadSafeQueue()
-        barrier = Barrier(value: 2)!
+        barrier = Barrier(count: 2)!
         handle = start(queue: queue, barrier: barrier)
     }
 
     private func end() {
         handle.cancel()
+        barrier.arriveAndWait()
     }
 
     private func waitForAll() {
@@ -57,7 +58,9 @@ private func start(queue: ThreadSafeQueue<QueueOperation>, barrier: Barrier) -> 
                 case (.wait, false):
                     barrier.arriveAndWait()
                 case (.notYet, false): continue
-                default: return
+                default:
+                    barrier.arriveAndWait()
+                    return
             }
         }
     }

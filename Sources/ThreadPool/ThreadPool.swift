@@ -30,7 +30,7 @@ public final class ThreadPool: @unchecked Sendable {
         self.count = count
         self.wait = waitType
         self.queue = ThreadSafeQueue()
-        self.barrier = Barrier(value: count + 1)!
+        self.barrier = Barrier(count: count + 1)!
         self.threadHandles = start(queue: queue, count: count, barrier: barrier)
     }
 
@@ -70,11 +70,10 @@ private func start(
             while let op = queue.next() {
                 switch (op, Thread.current.isCancelled) {
                     case let (.ready(work), false): work()
-                    case (.ready(_), true): return
                     case (.wait, _):
                         barrier.arriveAndWait()
                     case (.notYet, false): continue
-                    case (.notYet, true): return
+                    default: return
                 }
             }
         }

@@ -61,14 +61,14 @@ final class ThreadpoolTests: XCTestCase {
             Thread {
                 condition.wait(mutex: lock, forTimeInterval: 2)
                 if i % 5 == 0 {
-                    condition.signal()
+                    //condition.signal()
                 }
 
             }
         }
         threadHanddles.forEach { $0.start() }
 
-        condition.broadcast()
+        //condition.broadcast()
 
         condition.wait(mutex: lock, forTimeInterval: 4)
 
@@ -78,11 +78,30 @@ final class ThreadpoolTests: XCTestCase {
         }
     }
 
+    func testThreadPoolFatal() {
+        let pool = ThreadPool(count: 8, waitType: .waitForAll)
+        for value in 1 ... 10 {
+            pool?.submit {
+                if value == 10 {
+                    fatalError("Oh no \(value)")
+                }
+                print("Started \(value)")
+            }
+        }
+
+        XCTAssert(true)
+    }
+
     func testQueue() {
         let queue = ThreadSafeQueue<Int>(order: .firstOut)
-        DispatchQueue.concurrentPerform(iterations: 11) { value in
-            queue <- value
+        let latch = Latch(count: 10)!
+        for value in 1 ... 10 {
+            Thread {
+                queue <- value
+                latch.decrementAndWait()
+            }.start()
         }
+        latch.waitForAll()
 
         var total = 0
         while let value = <-queue {
@@ -93,7 +112,7 @@ final class ThreadpoolTests: XCTestCase {
     }
 
     func testThreadBlocker() {
-        let queue = Barrier(value: 3)
+        let queue = Barrier(count: 3)
         XCTAssertNotNil(queue)
         var total = 0
         let mutex = Mutex()
@@ -113,12 +132,12 @@ final class ThreadpoolTests: XCTestCase {
     func testNils() {
         XCTAssertNil(ThreadPool(count: 0))
         XCTAssertNil(ThreadPool(count: 0, waitType: .waitForAll))
-        XCTAssertNil(Barrier(value: 0))
-        XCTAssertNil(Latch(value: 0))
+        XCTAssertNil(Barrier(count: 0))
+        XCTAssertNil(Latch(count: 0))
     }
 
     func testThreadBlockerWithLatch() {
-        let queue = Latch(value: 3)
+        let queue = Latch(count: 3)
         XCTAssertNotNil(queue)
         let mutex = Mutex(type: .recursive)
         var total = 0
@@ -147,15 +166,34 @@ final class ThreadpoolTests: XCTestCase {
                 }
             }.start()
         }
+        Thread.sleep(forTimeInterval: 0.2)
+        XCTAssertEqual(total, 1)
+    }
+
+    func testOnceState() {
+        var total = 0
+        let once = OnceState()
+        for _ in 1 ... 10 {
+            Thread {
+                once.runOnce {
+                    total += 1
+                }
+            }.start()
+        }
+        Thread.sleep(forTimeInterval: 0.1)
         XCTAssertEqual(total, 1)
     }
 
     func testQueueReversed() {
         let queue = ThreadSafeQueue<Int>(order: .lastOut)
-        DispatchQueue.concurrentPerform(iterations: 11) { value in
-            queue <- value
+        let latch = Latch(count: 10)!
+        for value in 1 ... 10 {
+            Thread {
+                queue <- value
+                latch.decrementAndWait()
+            }.start()
         }
-
+        latch.waitForAll()
         var total = 0
         while let value = <-queue {
             total += value

@@ -18,7 +18,6 @@ final class MultiThreadedSerialJobExecutor: SerialExecutor {
         let job = UnownedJob(job)
         let executor = asUnownedSerialExecutor()
         threadHandle?.submit { [mutex] in
-            print(type(of: self), Thread.current)
             mutex.whileLocked {
                 job.runSynchronously(on: executor)
             }

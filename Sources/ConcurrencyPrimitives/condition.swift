@@ -1,8 +1,11 @@
 import Foundation
 
+///
 public final class Condition: @unchecked Sendable {
     private let condition: UnsafeMutablePointer<pthread_cond_t>
     private let conditionAttr: UnsafeMutablePointer<pthread_condattr_t>
+
+    ///
     public init() {
         condition = UnsafeMutablePointer.allocate(capacity: 1)
         condition.initialize(to: pthread_cond_t())
@@ -17,7 +20,8 @@ public final class Condition: @unchecked Sendable {
         conditionAttr.deallocate()
         condition.deallocate()
     }
-    ///
+
+    /// Blocks the current thread until a specified time interval is reached
     /// - Parameters:
     ///   - mutex:
     ///   - forTimeInterval:
@@ -30,7 +34,7 @@ public final class Condition: @unchecked Sendable {
         }
     }
 
-    ///
+    /// Blocks the current thread until the condition return true
     /// - Parameters:
     ///   - mutex:
     ///   - condition:
@@ -44,7 +48,7 @@ public final class Condition: @unchecked Sendable {
         }
     }
 
-    ///
+    /// Blocks the current thread
     /// - Parameter mutex:
     public func wait(mutex: Mutex) {
         let isLocked = mutex.tryLock()

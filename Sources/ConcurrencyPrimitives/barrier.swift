@@ -8,12 +8,12 @@ public final class Barrier: @unchecked Sendable {
     private let threadCount: Int
 
     /// 
-    /// - Parameter value: 
-    public init?(value: Int) {
-        if value < 1 {
+    /// - Parameter count: 
+    public init?(count: Int) {
+        if count < 1 {
             return nil
         }
-        threadCount = value
+        threadCount = count
     }
 
     ///

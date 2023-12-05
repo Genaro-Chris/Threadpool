@@ -7,12 +7,12 @@ public final class Latch: @unchecked Sendable {
     private var blockedThreadIndex: Int
 
     ///
-    /// - Parameter value:
-    public init?(value: Int) {
-        if value < 1 {
+    /// - Parameter count:
+    public init?(count: Int) {
+        if count < 1 {
             return nil
         }
-        blockedThreadIndex = value
+        blockedThreadIndex = count
     }
 
     ///
@@ -29,7 +29,7 @@ public final class Latch: @unchecked Sendable {
     }
 
     ///
-    /// Warning - This function will deadlock if ``decrementAndWait`` method is called more or less than the value passed to the initializer
+    /// Warning - This function will deadlock if ``decrementAndWait`` method is called more or less than the count passed to the initializer
     public func waitForAll() {
         condition.wait(
             mutex: mutex, condition: blockedThreadIndex == 0)

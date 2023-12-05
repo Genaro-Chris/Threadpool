@@ -36,11 +36,11 @@ enum Program {
         await withDiscardingTaskGroup { group in
             for priority in priorities {
                 group.addTask(priority: priority) {
+                    async let _ = specialActorInstance.increment(by: Int.random(in: 1 ... 10))
+                    async let _ = specialInstance.increment(by: Int.random(in: 1 ... 10))
                     Once.runOnce {
                         print("\(Task.currentPriority)")
                     }
-                    await specialActorInstance.increment(by: Int.random(in: 1 ... 10))
-                    await specialInstance.increment(by: Int.random(in: 1 ... 10))
                 }
             }
         }

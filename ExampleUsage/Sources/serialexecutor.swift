@@ -8,15 +8,14 @@ final class SerialJobExecutor: SerialExecutor {
         UnownedSerialExecutor(ordinary: self)
     }
 
-    init() {}
+    public init() {}
 
-    private let threadHandle = SingleThread()
+    private let threadHandle = SingleThread(waitType: .cancelAll)
 
     func enqueue(_ job: consuming ExecutorJob) {
         let job = UnownedJob(job)
         let executor = asUnownedSerialExecutor()
         threadHandle.submit {
-            print(type(of: self), Thread.current)
             job.runSynchronously(on: executor)
         }
     }
