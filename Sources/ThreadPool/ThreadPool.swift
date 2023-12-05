@@ -65,7 +65,7 @@ public final class ThreadPool: @unchecked Sendable {
 private func start(
     queue: ThreadSafeQueue<QueueOperation>, count: Int, barrier: Barrier
 ) -> [Thread] {
-    let threadHandles: [Thread] = (0 ..< count).map { _ in
+    let threadHandles = (0 ..< count).map { _ in
         let thread = Thread {
             while let op = queue.next() {
                 switch (op, Thread.current.isCancelled) {

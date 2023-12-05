@@ -78,20 +78,6 @@ final class ThreadpoolTests: XCTestCase {
         }
     }
 
-    func testThreadPoolFatal() {
-        let pool = ThreadPool(count: 8, waitType: .waitForAll)
-        for value in 1 ... 10 {
-            pool?.submit {
-                if value == 10 {
-                    fatalError("Oh no \(value)")
-                }
-                print("Started \(value)")
-            }
-        }
-
-        XCTAssert(true)
-    }
-
     func testQueue() {
         let queue = ThreadSafeQueue<Int>(order: .firstOut)
         let latch = Latch(count: 10)!
