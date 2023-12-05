@@ -1,8 +1,8 @@
 import ConcurrencyPrimitives
 
-extension ThreadSafeQueue<QueueOperation> {
+extension ThreadSafeQueue where Element == QueueOperation {
 
-    func next() -> QueueOperation? {
+    func next() -> Element? {
         guard let value = <-self else {
             return .notYet
         }
