@@ -235,7 +235,8 @@ final class ThreadpoolTests: XCTestCase {
             XCTAssertNotNil(pool)
             let lock = Mutex()
             for i in 1 ... 10 {
-                pool?.submit {
+                pool?.submit { 
+                    Thread.sleep(forTimeInterval: 0.8)
                     lock.whileLocked {
                         counter += i
                     }
