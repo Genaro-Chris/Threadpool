@@ -2,7 +2,6 @@ import ConcurrencyPrimitives
 import Foundation
 import ThreadPool
 
-
 /// 
 public final class SingleThreadSerialExecutor: SerialExecutor {
 

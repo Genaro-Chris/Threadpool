@@ -28,5 +28,16 @@ public final class Barrier: @unchecked Sendable {
             condition.wait(mutex: mutex, condition: blockedThreadIndex == 0)
         }
     }
-}
 
+    ///
+    public func arriveAlone() {
+        mutex.whileLocked {
+            blockedThreadIndex += 1
+            guard blockedThreadIndex != threadCount else {
+                blockedThreadIndex = 0
+                condition.broadcast()
+                return
+            }
+        }
+    }
+}

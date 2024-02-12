@@ -18,10 +18,10 @@ public class Mutex: @unchecked Sendable {
         mutexAttr = UnsafeMutablePointer.allocate(capacity: 1)
         mutexAttr.initialize(to: pthread_mutexattr_t())
         switch type {
-            case .normal:
-                pthread_mutexattr_settype(mutexAttr, 0)
-            case .recursive:
-                pthread_mutexattr_settype(mutexAttr, 1)
+        case .normal:
+            pthread_mutexattr_settype(mutexAttr, 0)
+        case .recursive:
+            pthread_mutexattr_settype(mutexAttr, 1)
         }
         pthread_mutex_init(mutex, mutexAttr)
     }
@@ -41,7 +41,7 @@ public class Mutex: @unchecked Sendable {
     ///
     /// - Returns:
     public func tryLock() -> Bool {
-        pthread_mutex_trylock(mutex) == 0 ? true : false
+        pthread_mutex_trylock(mutex) == 0
     }
 
     ///

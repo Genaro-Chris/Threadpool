@@ -16,7 +16,7 @@ let package = Package(
             name: "ExampleUsage",
             dependencies: [
                 .product(name: "ConcurrencyPrimitives", package: "ThreadPool"),
-                .product(name: "ThreadPool", package: "ThreadPool"),
+                .product(name: "ThreadPool", package: "ThreadPool")
             ],
             path: "Sources/")
     ]

@@ -22,10 +22,9 @@ public final class RWLock: @unchecked Sendable {
         rwLock = UnsafeMutablePointer.allocate(capacity: 1)
         rwLock.initialize(to: pthread_rwlock_t())
         switch preference {
+        case .readingFirst: pthread_rwlockattr_setkind_np(rwLockAttr, 0)
 
-            case .readingFirst: pthread_rwlockattr_setkind_np(rwLockAttr, 0)
-
-            case .writingFirst: pthread_rwlockattr_setkind_np(rwLockAttr, 1)
+        case .writingFirst: pthread_rwlockattr_setkind_np(rwLockAttr, 1)
         }
         pthread_rwlock_init(rwLock, rwLockAttr)
 
@@ -51,13 +50,13 @@ public final class RWLock: @unchecked Sendable {
     ///
     @discardableResult
     public func tryReadLock() -> Bool {
-        pthread_rwlock_tryrdlock(rwLock) == 0 ? true : false
+        pthread_rwlock_tryrdlock(rwLock) == 0
     }
 
     ///
     @discardableResult
     public func tryWriteLock() -> Bool {
-        pthread_rwlock_wrlock(rwLock) == 0 ? true : false
+        pthread_rwlock_wrlock(rwLock) == 0
     }
 
     ///

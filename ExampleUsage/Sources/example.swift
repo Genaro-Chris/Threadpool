@@ -19,15 +19,15 @@ enum Program {
 
         let pool = ThreadPool(count: 4)
 
-        for i in 1 ... 10 {
+        for index in 1 ... 10 {
             pool?.submit {
                 rwLock.whileWriteLocked {
-                    counter += i
+                    counter += index
                 }
             }
         }
 
-        Thread.sleep(forTimeInterval: 1)
+        Thread.sleep(forTimeInterval: 0.000002)
 
         rwLock.whileReadLocked {
             print("Counter \(counter)")

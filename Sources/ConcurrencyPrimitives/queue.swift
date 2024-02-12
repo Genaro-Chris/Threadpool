@@ -41,10 +41,10 @@ public final class ThreadSafeQueue<Element>: @unchecked Sendable {
                 return nil
             }
             switch order {
-                case .firstOut:
-                    return buffer.remove(at: 0)
-                case .lastOut:
-                    return buffer.popLast()
+            case .firstOut:
+                return buffer.remove(at: 0)
+            case .lastOut:
+                return buffer.popLast()
             }
 
         }

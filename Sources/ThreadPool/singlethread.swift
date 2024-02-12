@@ -27,7 +27,6 @@ public final class SingleThread: @unchecked Sendable {
 
     private func end() {
         handle.cancel()
-        barrier.arriveAndWait()
     }
 
     private func waitForAll() {
@@ -41,26 +40,23 @@ public final class SingleThread: @unchecked Sendable {
 
     deinit {
         switch waitType {
-            case .cancelAll: end()
+        case .cancelAll: end()
 
-            case .waitForAll:
-                waitForAll()
-                end()
+        case .waitForAll:
+            waitForAll()
+            end()
         }
     }
 }
 
 private func start(queue: ThreadSafeQueue<QueueOperation>, barrier: Barrier) -> Thread {
     let thread = Thread { [queue, barrier] in
-        while let op = queue.next() {
-            switch (op, Thread.current.isCancelled) {
-                case let (.ready(work), false): work()
-                case (.wait, false):
-                    barrier.arriveAndWait()
-                case (.notYet, false): continue
-                default:
-                    barrier.arriveAndWait()
-                    return
+        while let operation = queue.next() {
+            switch (operation, Thread.current.isCancelled) {
+            case let (.ready(work), false): work()
+            case (.wait, false): barrier.arriveAndWait()
+            case (.notYet, false): continue
+            default: return
             }
         }
     }

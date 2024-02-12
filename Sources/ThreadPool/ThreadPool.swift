@@ -53,11 +53,11 @@ public final class ThreadPool: @unchecked Sendable {
 
     deinit {
         switch wait {
-            case .cancelAll:
-                end()
-            case .waitForAll:
-                waitForAll()
-                end()
+        case .cancelAll:
+            end()
+        case .waitForAll:
+            waitForAll()
+            end()
         }
     }
 }
@@ -65,15 +65,15 @@ public final class ThreadPool: @unchecked Sendable {
 private func start(
     queue: ThreadSafeQueue<QueueOperation>, count: Int, barrier: Barrier
 ) -> [Thread] {
-    let threadHandles: [Thread] = (0 ..< count).map { _ in
+    let threadHandles = (0 ..< count).map { _ in
         let thread = Thread {
-            while let op = queue.next() {
-                switch (op, Thread.current.isCancelled) {
-                    case let (.ready(work), false): work()
-                    case (.wait, _):
-                        barrier.arriveAndWait()
-                    case (.notYet, false): continue
-                    default: return
+            while let operation = queue.next() {
+                switch (operation, Thread.current.isCancelled) {
+                case let (.ready(work), false): work()
+                case (.wait, _):
+                    barrier.arriveAndWait()
+                case (.notYet, false): continue
+                default: return
                 }
             }
         }

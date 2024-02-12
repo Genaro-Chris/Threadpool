@@ -27,11 +27,12 @@ public final class Condition: @unchecked Sendable {
     ///   - forTimeInterval:
     public func wait(mutex: Mutex, forTimeInterval: TimeInterval) {
         let isLocked = mutex.tryLock()
+        defer {
+            if isLocked { mutex.unlock() }
+        }
         var deadline = timespec(tv_sec: Int(ceil(forTimeInterval)), tv_nsec: 0)
         pthread_cond_timedwait(condition, mutex.mutex, &deadline)
-        if isLocked {
-            mutex.unlock()
-        }
+
     }
 
     /// Blocks the current thread until the condition return true
@@ -40,22 +41,23 @@ public final class Condition: @unchecked Sendable {
     ///   - condition:
     public func wait(mutex: Mutex, condition: @autoclosure () -> Bool) {
         let isLocked = mutex.tryLock()
+        defer {
+            if isLocked { mutex.unlock() }
+        }
         while !condition() {
             pthread_cond_wait(self.condition, mutex.mutex)
         }
-        if isLocked {
-            mutex.unlock()
-        }
+
     }
 
     /// Blocks the current thread
     /// - Parameter mutex:
     public func wait(mutex: Mutex) {
         let isLocked = mutex.tryLock()
-        pthread_cond_wait(condition, mutex.mutex)
-        if isLocked {
-            mutex.unlock()
+        defer {
+            if isLocked { mutex.unlock() }
         }
+        pthread_cond_wait(condition, mutex.mutex)
     }
 
     ///

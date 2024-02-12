@@ -19,7 +19,7 @@ let package = Package(
             name: "SingleThreadExecutor",
             dependencies: [
                 .product(name: "ConcurrencyPrimitives", package: "ThreadPool"),
-                .product(name: "ThreadPool", package: "ThreadPool"),
+                .product(name: "ThreadPool", package: "ThreadPool")
             ])
     ]
 )

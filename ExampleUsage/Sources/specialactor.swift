@@ -8,13 +8,13 @@ actor SpecialActor {
         UnownedSerialExecutor(ordinary: executor)
     }
 
-    private var count_ = 0
-
-    func increment(by: Int) {
-        count_ += by
+    func increment(by value: Int) {
+        count += value
     }
 
-    var count: Int {
-        count_
+    init() {
+        count = 0
     }
+
+    var count: Int
 }
