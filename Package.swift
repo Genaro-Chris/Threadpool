@@ -11,7 +11,7 @@ let package = Package(
         .library(name: "ConcurrencyPrimitives", targets: ["ConcurrencyPrimitives"]),
         .library(
             name: "ThreadPool",
-            targets: ["ThreadPool"]),
+            targets: ["ThreadPool"])
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -21,6 +21,6 @@ let package = Package(
         .target(name: "ConcurrencyPrimitives"),
         .testTarget(
             name: "ThreadPoolTests",
-            dependencies: ["ConcurrencyPrimitives", "ThreadPool"], path: "Tests"),
+            dependencies: ["ConcurrencyPrimitives", "ThreadPool"], path: "Tests")
     ]
 )
