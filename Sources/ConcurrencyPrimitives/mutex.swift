@@ -1,6 +1,6 @@
 import Foundation
 
-public class Mutex: @unchecked Sendable {
+public class Mutex {
 
     let mutex: UnsafeMutablePointer<pthread_mutex_t>
     private let mutexAttr: UnsafeMutablePointer<pthread_mutexattr_t>

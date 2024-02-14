@@ -1,7 +1,7 @@
 import Foundation
 
 ///
-public final class Barrier: @unchecked Sendable {
+public final class Barrier {
     private let condition = Condition()
     private let mutex = Mutex()
     private var blockedThreadIndex = 0

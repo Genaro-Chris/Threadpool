@@ -1,7 +1,7 @@
 import Foundation
 
 ///
-public final class Latch: @unchecked Sendable {
+public final class Latch {
     private let condition = Condition()
     private let mutex = Mutex()
     private var blockedThreadIndex: Int

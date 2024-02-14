@@ -1,7 +1,7 @@
 import Foundation
 
 ///
-public final class Condition: @unchecked Sendable {
+public final class Condition {
     private let condition: UnsafeMutablePointer<pthread_cond_t>
     private let conditionAttr: UnsafeMutablePointer<pthread_condattr_t>
 

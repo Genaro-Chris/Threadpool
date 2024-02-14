@@ -51,14 +51,16 @@ public final class SingleThread: @unchecked Sendable {
 
 private func start(queue: ThreadSafeQueue<QueueOperation>, barrier: Barrier) -> Thread {
     let thread = Thread { [queue, barrier] in
-        while let operation = queue.next() {
-            switch (operation, Thread.current.isCancelled) {
-            case let (.ready(work), false): work()
-            case (.wait, false): barrier.arriveAndWait()
-            case (.notYet, false): continue
-            default: return
+        repeat {
+            if let operation = queue.dequeue() {
+                switch operation {
+                case let .ready(work): work()
+                case .wait: barrier.arriveAndWait()
+                }
+            } else {
+                Thread.sleep(forTimeInterval: 0.0000000000000000001)
             }
-        }
+        } while !Thread.current.isCancelled
     }
     thread.start()
     return thread
