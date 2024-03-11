@@ -1,4 +1,12 @@
-import Foundation
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+    import Darwin
+#else
+    import Glibc
+#endif
+
+public typealias TaskItem = () -> Void
+
+public typealias SendableTaskItem = @Sendable () -> Void
 
 ///
 public enum Once {
@@ -7,7 +15,7 @@ public enum Once {
 
     ///
     /// - Parameter body:
-    public static func runOnce(_ body: @escaping () -> Void) {
+    public static func runOnce(_ body: @escaping TaskItem) {
         Self.queue <- body
         pthread_once(&once) {
             (<-Once.queue)?()
@@ -18,7 +26,7 @@ public enum Once {
     private static let queue = ThreadSafeQueue<() -> Void>()
 }
 
-class OnceState {
+public class OnceState {
 
     public init() {}
 
@@ -26,12 +34,13 @@ class OnceState {
 
     private let mutex = Mutex()
 
-    public func runOnce(body: @escaping () -> Void) {
+    public func runOnce(body: TaskItem) {
         mutex.whileLocked {
-            if !done {
-                done = true
-                body()
+            guard !done else {
+                return
             }
+            done = true
+            body()
         }
     }
     public var hasExecuted: Bool {

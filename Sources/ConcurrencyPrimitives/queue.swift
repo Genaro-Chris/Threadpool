@@ -6,6 +6,29 @@ infix operator <-
 ///
 public final class ThreadSafeQueue<Element>: @unchecked Sendable {
 
+    private class Buffer<T> {
+        var buffer: [T] = []
+
+        public func enqueue(_ item: T) {
+            buffer.append(item)
+        }
+
+        ///
+        /// - Returns:
+        public func dequeue(order: Order) -> T? {
+            guard !buffer.isEmpty else {
+                return nil
+            }
+            switch order {
+            case .firstOut:
+                return buffer.remove(at: 0)
+            case .lastOut:
+                return buffer.popLast()
+            }
+
+        }
+    }
+
     ///
     public enum Order {
         /// First-In First out order
@@ -20,16 +43,17 @@ public final class ThreadSafeQueue<Element>: @unchecked Sendable {
     /// - Parameter order:
     public init(order: Order = .firstOut) {
         self.order = order
+        self.buffer = Buffer()
     }
 
-    private var buffer: [Element] = []
-    private let mutex = Mutex()
+    private let buffer: Buffer<Element>
+    private let mutex = Mutex(type: .recursive)
 
     ///
     /// - Parameter item:
     public func enqueue(_ item: Element) {
         mutex.whileLocked {
-            buffer.append(item)
+            buffer.enqueue(item)
         }
     }
 
@@ -37,16 +61,7 @@ public final class ThreadSafeQueue<Element>: @unchecked Sendable {
     /// - Returns:
     public func dequeue() -> Element? {
         return mutex.whileLocked {
-            guard !buffer.isEmpty else {
-                return nil
-            }
-            switch order {
-            case .firstOut:
-                return buffer.remove(at: 0)
-            case .lastOut:
-                return buffer.popLast()
-            }
-
+            buffer.dequeue(order: order)
         }
     }
 }
@@ -61,5 +76,11 @@ extension ThreadSafeQueue {
     ///
     public static prefix func <- (this: ThreadSafeQueue) -> Element? {
         this.dequeue()
+    }
+
+    public var isEmpty: Bool {
+        return mutex.whileLocked {
+            buffer.buffer.isEmpty
+        }
     }
 }

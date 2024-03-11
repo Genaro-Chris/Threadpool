@@ -1,4 +1,8 @@
-import Foundation
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+    import Darwin
+#else
+    import Glibc
+#endif
 
 ///
 public final class RWLock: @unchecked Sendable {
@@ -7,10 +11,9 @@ public final class RWLock: @unchecked Sendable {
     let rwLockAttr: UnsafeMutablePointer<pthread_rwlockattr_t>
 
     ///
-    public enum RWLockPreference {
-
+    public enum RWLockPreference: Int32 {
         ///
-        case readingFirst
+        case readingFirst = 0
         ///
         case writingFirst
     }
@@ -21,18 +24,13 @@ public final class RWLock: @unchecked Sendable {
         rwLockAttr.initialize(to: pthread_rwlockattr_t())
         rwLock = UnsafeMutablePointer.allocate(capacity: 1)
         rwLock.initialize(to: pthread_rwlock_t())
-        switch preference {
-        case .readingFirst: pthread_rwlockattr_setkind_np(rwLockAttr, 0)
-
-        case .writingFirst: pthread_rwlockattr_setkind_np(rwLockAttr, 1)
-        }
         pthread_rwlock_init(rwLock, rwLockAttr)
-
+        pthread_rwlockattr_setkind_np(rwLockAttr, preference.rawValue)
     }
 
     deinit {
-        rwLockAttr.deinitialize(count: 1)
-        rwLock.deinitialize(count: 1)
+        pthread_rwlockattr_destroy(rwLockAttr)
+        pthread_rwlock_destroy(rwLock)
         rwLockAttr.deallocate()
         rwLock.deallocate()
     }

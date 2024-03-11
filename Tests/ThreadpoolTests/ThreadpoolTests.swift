@@ -9,12 +9,12 @@ final class ThreadpoolTests: XCTestCase {
         let condition = Condition()
         let lock = Mutex(type: .normal)
         var total = 0
-        let threadHanddles = (1 ... 10).map { i in
+        let threadHanddles = (1 ... 10).map { index in
             Thread {
                 lock.whileLocked {
-                    total += i
+                    total += index
+                    condition.wait(mutex: lock)
                 }
-                condition.wait(mutex: lock)
             }
         }
         threadHanddles.forEach { $0.start() }
@@ -31,14 +31,14 @@ final class ThreadpoolTests: XCTestCase {
 
     func testConditionWithBroadcast() {
         let condition = Condition()
-        let lock = Mutex(type: .normal)
+        let lock = Mutex()
         var total = 0
-        let threadHanddles = (1 ... 10).map { i in
+        let threadHanddles = (1 ... 10).map { index in
             Thread {
                 lock.whileLocked {
-                    total += i
+                    total += index
+                    condition.wait(mutex: lock)
                 }
-                condition.wait(mutex: lock)
             }
         }
         threadHanddles.forEach { $0.start() }
@@ -55,24 +55,30 @@ final class ThreadpoolTests: XCTestCase {
 
     func testConditionSleepWithBroadcast() {
         let condition = Condition()
-        let lock = Mutex(type: .normal)
+        let lock = Mutex()
         let total = 0
-        let threadHanddles = (1 ... 5).map { i in
+        let threadHandles = (1 ... 5).map { index in
             Thread {
-                condition.wait(mutex: lock, forTimeInterval: 2)
-                if i % 5 == 0 {
-                    //condition.signal()
+                defer {
+                    print("Thread \(index) done")
+                }
+                lock.whileLocked {
+                    condition.wait(mutex: lock, forTimeInterval: 2)
+                    if index % 5 == 0 {
+                        condition.signal()
+                    }
                 }
 
             }
         }
-        threadHanddles.forEach { $0.start() }
 
-        //condition.broadcast()
+        threadHandles.forEach { $0.start() }
 
-        condition.wait(mutex: lock, forTimeInterval: 4)
+        lock.whileLocked {
+            condition.wait(mutex: lock, forTimeInterval: 4)
+        }
 
-        threadHanddles.forEach { $0.cancel() }
+        threadHandles.forEach { $0.cancel() }
         lock.whileLocked {
             XCTAssertEqual(total, 0)
         }
@@ -102,11 +108,11 @@ final class ThreadpoolTests: XCTestCase {
         XCTAssertNotNil(queue)
         var total = 0
         let mutex = Mutex()
-        for i in 1 ... 10 {
+        for index in 1 ... 10 {
             Thread {
                 queue?.arriveAndWait()
                 mutex.whileLocked {
-                    total += i
+                    total += index
                 }
             }.start()
         }
@@ -127,11 +133,11 @@ final class ThreadpoolTests: XCTestCase {
         XCTAssertNotNil(queue)
         let mutex = Mutex(type: .recursive)
         var total = 0
-        for i in 1 ... 10 {
+        for index in 1 ... 10 {
             Thread {
-                if i % 3 == 0 {
+                if index % 3 == 0 {
                     mutex.whileLocked {
-                        total += i
+                        total += index
                     }
                     queue?.decrementAndWait()
                 }
@@ -143,12 +149,97 @@ final class ThreadpoolTests: XCTestCase {
         }
     }
 
+    func testMutex() {
+        struct Student {
+            var age: Int
+            var scores: [Int]
+        }
+        let mutex = Mutex()
+        var student = Student(age: 0, scores: [])
+        DispatchQueue.concurrentPerform(iterations: 10) { index in
+            mutex.whileLocked {
+                student.scores.append(index)
+                if index == 9 {
+                    student.age = 18
+                }
+            }
+        }
+        XCTAssertEqual(student.scores.count, 10)
+        XCTAssertEqual(student.age, 18)
+    }
+
+    func testMutexTimedOut() {
+        struct Student {
+            var age: Int
+            var scores: [Int]
+        }
+        let mutex = Mutex()
+        var student = Student(age: 0, scores: [])
+        DispatchQueue.concurrentPerform(iterations: 10) { index in
+            mutex.whileLocked {
+                student.scores.append(index)
+                if index == 9 {
+                    student.age = 18
+                }
+            }
+        }
+
+        DispatchQueue.global().async {
+            mutex.lock()
+            Thread.sleep(forTimeInterval: 10)
+        }
+
+        mutex.tryLockUntil(forTimeInterval: 6)
+
+        XCTAssertEqual(student.scores.count, 10)
+        XCTAssertEqual(student.age, 18)
+    }
+
+    func testLocked() {
+        struct Student {
+            var age: Int
+            var scores: [Int]
+        }
+        let student = Locked(Student(age: 0, scores: []))
+        DispatchQueue.concurrentPerform(iterations: 10) { index in
+            student.updateWhileLocked { student in
+                student.scores.append(index)
+            }
+            if index == 9 {
+                student.age = 18
+            }
+        }
+        XCTAssertEqual(student.scores.count, 10)
+        XCTAssertEqual(student.age, 18)
+    }
+
+    func testLockedWrapper() {
+        struct Student {
+            var age: Int
+            var scores: [Int]
+        }
+        @Locked var student = Student(age: 0, scores: [])
+        DispatchQueue.concurrentPerform(iterations: 10) { index in
+            $student.updateWhileLocked { student in
+                student.scores.append(index)
+                if index == 9 {
+                    student.age = 18
+                }
+            }
+        }
+        XCTAssertEqual(student.scores.count, 10)
+        XCTAssertEqual(student.age, 18)
+    }
+
     func testOnce() {
         var total = 0
+        let mutex = Mutex()
         for _ in 1 ... 10 {
             Thread {
-                Once.runOnce {
-                    total += 1
+                mutex.whileLocked {
+                    Once.runOnce {
+                        total += 1
+                    }
                 }
             }.start()
         }
@@ -158,11 +249,14 @@ final class ThreadpoolTests: XCTestCase {
 
     func testOnceState() {
         var total = 0
+        let mutex = Mutex()
         let once = OnceState()
         for _ in 1 ... 10 {
             Thread {
-                once.runOnce {
-                    total += 1
+                mutex.whileLocked {
+                    once.runOnce {
+                        total += 1
+                    }
                 }
             }.start()
         }
@@ -195,10 +289,10 @@ final class ThreadpoolTests: XCTestCase {
             let pool = ThreadPool(count: 10, waitType: .waitForAll)
             XCTAssertNotNil(pool)
             let lock = Mutex()
-            for i in 1 ... 10 {
+            for index in 1 ... 10 {
                 pool?.submit {
                     lock.whileLocked {
-                        counter += i
+                        counter += index
                     }
                     Thread.sleep(forTimeInterval: 1)
                 }
@@ -215,10 +309,10 @@ final class ThreadpoolTests: XCTestCase {
             let pool = ThreadPool(count: 1, waitType: .waitForAll)
             XCTAssertNotNil(pool)
             let lock = Mutex()
-            for i in 1 ... 10 {
+            for index in 1 ... 10 {
                 pool?.submit {
                     lock.whileLocked {
-                        counter += i
+                        counter += index
                     }
                 }
             }
@@ -234,11 +328,12 @@ final class ThreadpoolTests: XCTestCase {
             let pool = ThreadPool(count: 1, waitType: .cancelAll)
             XCTAssertNotNil(pool)
             let lock = Mutex()
-            for i in 1 ... 10 {
+            for index in 1 ... 10 {
                 pool?.submit {
                     lock.whileLocked {
-                        counter += i
+                        counter += index
                     }
+                    Thread.sleep(forTimeInterval: 1)
                 }
             }
         }
@@ -251,10 +346,10 @@ final class ThreadpoolTests: XCTestCase {
         var counter = 0
         do {
             let pool = ThreadPool(count: 3, waitType: .waitForAll)
-            (1 ... 5).forEach { i in
+            (1 ... 5).forEach { index in
                 pool?.submit {
                     rwLock.whileWriteLocked {
-                        counter += i
+                        counter += index
                     }
                 }
             }
@@ -271,12 +366,12 @@ final class ThreadpoolTests: XCTestCase {
             let pool = ThreadPool(count: 5, waitType: .waitForAll)
             XCTAssertNotNil(pool)
             let lock = Mutex()
-            for i in 1 ... 10 {
+            for index in 1 ... 10 {
                 pool?.submit {
                     lock.whileLocked {
-                        counter += i
+                        counter += index
+                        print("At \(index)")
                     }
-                    Thread.sleep(forTimeInterval: 2)
                 }
             }
 
@@ -300,10 +395,10 @@ final class ThreadpoolTests: XCTestCase {
             let pool = ThreadPool(count: 5, waitType: .cancelAll)
             XCTAssertNotNil(pool)
             let lock = Mutex()
-            for i in 1 ... 10 {
+            for index in 1 ... 10 {
                 pool?.submit {
                     lock.whileLocked {
-                        counter += i
+                        counter += index
                     }
                     Thread.sleep(forTimeInterval: 2)
                 }
@@ -317,11 +412,12 @@ final class ThreadpoolTests: XCTestCase {
         var checks: [String] = []
         do {
             let pool = SingleThread(waitType: .waitForAll)
-            let lock = Mutex()
+            let lock = Mutex(type: .recursive)
             for _ in 1 ... 10 {
                 pool.submit {
                     lock.whileLocked {
                         checks.append(Thread.current.description)
+                        print(checks.count)
                     }
                 }
             }
@@ -380,11 +476,10 @@ final class ThreadpoolTests: XCTestCase {
         do {
             let pool = ThreadPool(count: 5, waitType: .cancelAll)!
             let lock = Mutex()
-
-            for i in 1 ... 10 {
+            for index in 1 ... 10 {
                 pool.submit {
                     lock.whileLocked {
-                        counter += i
+                        counter += index
                     }
                     Thread.sleep(forTimeInterval: 1)
                 }
@@ -392,5 +487,18 @@ final class ThreadpoolTests: XCTestCase {
         }
 
         XCTAssertNotEqual(counter, 55)
+    }
+
+    func testSemaphore() {
+        let semaphore = LockBasedSemaphore(10)
+        for _ in 1 ... 10 {
+            DispatchQueue.global().async {
+                defer { semaphore.decrement() }
+                Thread.sleep(forTimeInterval: Double.random(in: 1 ... 5))
+            }
+        }
+
+        semaphore.waitForZero()
+        XCTAssertEqual(semaphore.count, 0)
     }
 }

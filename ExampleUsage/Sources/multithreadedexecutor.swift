@@ -1,4 +1,4 @@
-import ConcurrencyPrimitives
+@preconcurrency import ConcurrencyPrimitives
 import Foundation
 import ThreadPool
 

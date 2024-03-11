@@ -3,26 +3,26 @@ import Foundation
 
 public final class SingleThread: @unchecked Sendable {
 
-    private let handle: Thread
+    private let handle: UniqueThread
 
     ///
     public func poll() {
         waitForAll()
     }
 
-    private let queue: ThreadSafeQueue<QueueOperation>
-
     private let waitType: WaitType
 
     private let barrier: Barrier
+
+    private let started: OnceState
 
     ///
     /// - Parameter waitType:
     public init(waitType: WaitType = .waitForAll) {
         self.waitType = waitType
-        queue = ThreadSafeQueue()
         barrier = Barrier(count: 2)!
-        handle = start(queue: queue, barrier: barrier)
+        handle = UniqueThread()
+        started = OnceState()
     }
 
     private func end() {
@@ -30,15 +30,21 @@ public final class SingleThread: @unchecked Sendable {
     }
 
     private func waitForAll() {
-        queue <- .wait
+        handle.submit { [barrier] in
+            barrier.arriveAlone()
+        }
         barrier.arriveAndWait()
     }
 
-    public func submit(_ body: @escaping () -> Void) {
-        queue <- .ready(element: body)
+    public func submit(_ body: @escaping TaskItem) {
+        started.runOnce {
+            handle.start()
+        }
+        handle.submit(body)
     }
 
     deinit {
+        guard started.hasExecuted else { return }
         switch waitType {
         case .cancelAll: end()
 
@@ -47,21 +53,4 @@ public final class SingleThread: @unchecked Sendable {
             end()
         }
     }
-}
-
-private func start(queue: ThreadSafeQueue<QueueOperation>, barrier: Barrier) -> Thread {
-    let thread = Thread { [queue, barrier] in
-        repeat {
-            if let operation = queue.dequeue() {
-                switch operation {
-                case let .ready(work): work()
-                case .wait: barrier.arriveAndWait()
-                }
-            } else {
-                Thread.sleep(forTimeInterval: 0.0000000000000000001)
-            }
-        } while !Thread.current.isCancelled
-    }
-    thread.start()
-    return thread
 }

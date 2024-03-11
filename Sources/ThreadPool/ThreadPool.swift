@@ -4,15 +4,38 @@ import Foundation
 ///
 public final class ThreadPool: @unchecked Sendable {
 
-    private let queue: ThreadSafeQueue<QueueOperation>
+private struct RandomGenerator {
 
-    private let count: Int
+    var filled: [Int]
 
-    private let threadHandles: [Thread]
+    let max: Int
+
+    init(to size: Int) {
+        max = size
+        filled = (0..<max).shuffled()
+    }
+
+    mutating func random() -> Int {
+        if filled.isEmpty {
+            filled = (0..<max).shuffled()
+            return filled.removeFirst()
+        }
+        return filled.removeFirst()
+    }
+
+}
+
+    private var generator: RandomGenerator
+
+    private let threadHandles: [UniqueThread]
 
     private let barrier: Barrier
 
     private let wait: WaitType
+
+    private let mutex: Mutex
+
+    private let started: OnceState
 
     ///
     public func poll() {
@@ -27,31 +50,43 @@ public final class ThreadPool: @unchecked Sendable {
         if count < 1 {
             return nil
         }
-        self.count = count
+        mutex = Mutex()
         self.wait = waitType
-        self.queue = ThreadSafeQueue()
         self.barrier = Barrier(count: count + 1)!
-        self.threadHandles = start(queue: queue, count: count, barrier: barrier)
+        generator = RandomGenerator(to: count)
+        started = OnceState()
+        threadHandles = (0..<count).map { _ in  UniqueThread() }
     }
 
     ///
     /// - Parameter body:
-    public func submit(_ body: @escaping () -> Void) {
-        queue <- .ready(element: body)
+    public func submit(_ body: @escaping TaskItem) {
+        started.runOnce {
+            threadHandles.forEach { $0.start() }
+        }
+        mutex.whileLocked {
+            threadHandles[generator.random()].submit(body)
+        }
     }
 
     private func end() {
-        threadHandles.forEach { $0.cancel() }
+        threadHandles.forEach {
+            $0.cancel()
+        }
     }
 
     private func waitForAll() {
-        (0 ..< count).forEach { _ in
-            queue <- .wait
+        guard started.hasExecuted else { return }
+        threadHandles.forEach { [barrier] in
+            $0.submit {
+                barrier.arriveAlone()
+            }
         }
         barrier.arriveAndWait()
     }
 
     deinit {
+        guard started.hasExecuted else { return }
         switch wait {
         case .cancelAll:
             end()
@@ -60,26 +95,4 @@ public final class ThreadPool: @unchecked Sendable {
             end()
         }
     }
-}
-
-private func start(
-    queue: ThreadSafeQueue<QueueOperation>, count: Int, barrier: Barrier
-) -> [Thread] {
-    let threadHandles = (0 ..< count).map { _ -> Thread in
-        let thread = Thread {
-            repeat {
-                if let operation = queue.dequeue() {
-                    switch operation {
-                    case let .ready(work): work()
-                    case .wait: barrier.arriveAndWait()
-                    }
-                } else {
-                    Thread.sleep(forTimeInterval: 0.0000000000000000001)
-                }
-            } while !Thread.current.isCancelled
-        }
-        thread.start()
-        return thread
-    }
-    return threadHandles
 }
