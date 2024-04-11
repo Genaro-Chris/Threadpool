@@ -6,7 +6,7 @@ import ThreadPool
 enum Program {
     static func main() async throws {
 
-        /* print("Hello, world!")
+        print("Hello, world!")
 
         let specialActorInstance = SpecialActor()
 
@@ -47,17 +47,7 @@ enum Program {
         }
 
         print("Count for \(type(of: specialActorInstance)): \(await specialActorInstance.count)")
-        print("Count for \(type(of: specialInstance)): \(await specialInstance.count)") */
+        print("Count for \(type(of: specialInstance)): \(await specialInstance.count)")
 
-        try await Task.sleep(for: .seconds(1.2))
-
-        let mutex = Mutex(type: .error)
-        let condition = Condition()
-        let now = ContinuousClock.continuous.measure {
-            mutex.whileLocked {
-                condition.wait(mutex: mutex, forTimeInterval: .nanoseconds(1))
-            }
-        }
-        print("It took \(now) seconds")
     }
 }

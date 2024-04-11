@@ -84,7 +84,9 @@ public class Mutex {
         )
 
         // wait until the time passed as argument as elapsed
-        pthread_mutex_timedlock(mutex, &timeoutAbs)
+        #if os(Linux)
+            pthread_mutex_timedlock(mutex, &timeoutAbs)
+        #endif
     }
 
     ///

@@ -64,17 +64,13 @@ public final class Condition {
                 tv_nsec: Int(allNSecs % nsecPerSec))
             assert(timeoutAbs.tv_nsec >= 0 && timeoutAbs.tv_nsec < Int(nsecPerSec))
             assert(timeoutAbs.tv_sec >= curTime.tv_sec)
-            while true {
-                switch pthread_cond_timedwait(self.cond, mutex, &timeoutAbs) {
-                case 0:
-                    continue
-                case ETIMEDOUT:
-                    self.unlock()
-                    return false
-                case let err:
-                    fatalError("caught error \(err) when calling pthread_cond_timedwait")
-                }
+            switch pthread_cond_timedwait(condition, mutex.mutex, &timeoutAbs) {
+            case 0, ETIMEDOUT:
+                return
+            case let err:
+                fatalError("caught error \(err) when calling pthread_cond_timedwait")
             }
+
         #else
             pthread_condattr_setclock(conditionAttr, CLOCK_MONOTONIC)
 

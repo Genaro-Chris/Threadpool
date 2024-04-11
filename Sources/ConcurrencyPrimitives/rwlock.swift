@@ -1,3 +1,5 @@
+import Foundation
+
 #if canImport(Darwin)
     import Darwin
 #elseif canImport(Glibc)
@@ -7,8 +9,6 @@
 #else
     #error("Unable to identify your C library.")
 #endif
-
-import Foundation
 
 ///
 public final class RWLock: @unchecked Sendable {
@@ -31,7 +31,9 @@ public final class RWLock: @unchecked Sendable {
         rwLock = UnsafeMutablePointer.allocate(capacity: 1)
         rwLock.initialize(to: pthread_rwlock_t())
         pthread_rwlock_init(rwLock, rwLockAttr)
-        pthread_rwlockattr_setkind_np(rwLockAttr, preference.rawValue)
+        #if os(Linux)
+            pthread_rwlockattr_setkind_np(rwLockAttr, preference.rawValue)
+        #endif
     }
 
     deinit {
