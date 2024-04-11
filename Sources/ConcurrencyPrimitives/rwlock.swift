@@ -1,8 +1,14 @@
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#if canImport(Darwin)
     import Darwin
-#else
+#elseif canImport(Glibc)
     import Glibc
+#elseif canImport(Musl)
+    import Musl
+#else
+    #error("Unable to identify your C library.")
 #endif
+
+import Foundation
 
 ///
 public final class RWLock: @unchecked Sendable {

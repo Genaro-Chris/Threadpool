@@ -4,36 +4,11 @@ import Foundation
 ///
 public final class ThreadPool: @unchecked Sendable {
 
-private struct RandomGenerator {
-
-    var filled: [Int]
-
-    let max: Int
-
-    init(to size: Int) {
-        max = size
-        filled = (0..<max).shuffled()
-    }
-
-    mutating func random() -> Int {
-        if filled.isEmpty {
-            filled = (0..<max).shuffled()
-            return filled.removeFirst()
-        }
-        return filled.removeFirst()
-    }
-
-}
-
-    private var generator: RandomGenerator
-
     private let threadHandles: [UniqueThread]
 
     private let barrier: Barrier
 
     private let wait: WaitType
-
-    private let mutex: Mutex
 
     private let started: OnceState
 
@@ -50,10 +25,8 @@ private struct RandomGenerator {
         if count < 1 {
             return nil
         }
-        mutex = Mutex()
         self.wait = waitType
         self.barrier = Barrier(count: count + 1)!
-        generator = RandomGenerator(to: count)
         started = OnceState()
         threadHandles = (0..<count).map { _ in  UniqueThread() }
     }
@@ -64,9 +37,7 @@ private struct RandomGenerator {
         started.runOnce {
             threadHandles.forEach { $0.start() }
         }
-        mutex.whileLocked {
-            threadHandles[generator.random()].submit(body)
-        }
+        threadHandles.randomElement()?.submit(body)
     }
 
     private func end() {
@@ -94,5 +65,6 @@ private struct RandomGenerator {
             waitForAll()
             end()
         }
+        threadHandles.forEach { $0.join() }
     }
 }

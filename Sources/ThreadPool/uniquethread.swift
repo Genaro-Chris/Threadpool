@@ -1,5 +1,6 @@
 import ConcurrencyPrimitives
-import Foundation
+
+import class Foundation.Thread
 
 public typealias TaskItem = () -> Void
 
@@ -7,32 +8,30 @@ public typealias SendableTaskItem = @Sendable () -> Void
 
 class UniqueThread: Thread {
 
-    let condition = Condition()
+    let latch = Latch(count: 1)
 
-    let mutex = Mutex(type: .normal)
-
-    let queue = ThreadSafeQueue<TaskItem>()
+    let queue = UnboundedChannel<TaskItem>()
 
     func submit(_ body: @escaping TaskItem) {
-        mutex.whileLocked {
-            queue <- body
-            condition.signal()
-        }
-    }
-
-    fileprivate func dequeue() -> TaskItem? {
-        return mutex.whileLocked {
-            condition.wait(mutex: mutex, condition: !queue.isEmpty)
-            guard !queue.isEmpty else { return nil }
-            return queue.dequeue()
-        }
+        _ = queue.enqueue(body)
     }
 
     override func main() {
         while !self.isCancelled {
-            if let work = self.dequeue() {
+            for work in queue {
                 work()
             }
         }
+        latch?.decrementAlone()
+    }
+
+    func join() {
+        latch?.waitForAll()
+    }
+
+    override func cancel() {
+        queue.close()
+        queue.clear()
+        super.cancel()
     }
 }

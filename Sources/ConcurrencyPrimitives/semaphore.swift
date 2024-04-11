@@ -1,13 +1,4 @@
-import ConcurrencyPrimitives
-import Foundation
-
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
-    import Darwin
-#else
-    import Glibc
-#endif
-
-final class LockBasedSemaphore {
+public final class LockBasedSemaphore {
 
     private let condition = Condition()
 
@@ -23,12 +14,12 @@ final class LockBasedSemaphore {
         }
     }
 
-    init(_ size: Int = 0) {
+    public init(size: Int = 0) {
         innerCount = size
         self.size = size
     }
 
-    func decrement(by count: Int = 1) {
+    public func decrement(by count: Int = 1) {
         mutex.whileLocked {
             self.innerCount -= count
             if innerCount == 0 {
@@ -37,10 +28,9 @@ final class LockBasedSemaphore {
         }
     }
 
-    func waitForZero() {
+    public func waitForZero() {
         mutex.whileLocked {
             condition.wait(mutex: mutex, condition: innerCount == 0)
         }
-        print("Done")
     }
 }

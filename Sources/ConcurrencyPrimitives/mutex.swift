@@ -1,9 +1,13 @@
 import Foundation
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#if canImport(Darwin)
     import Darwin
-#else
+#elseif canImport(Glibc)
     import Glibc
+#elseif canImport(Musl)
+    import Musl
+#else
+    #error("Unable to identify your underlying C library.")
 #endif
 
 /// A threading mutex based on `libpthread` instead of `libdispatch`.
@@ -16,23 +20,34 @@ public class Mutex {
 
     let mutex: UnsafeMutablePointer<pthread_mutex_t>
     private let mutexAttr: UnsafeMutablePointer<pthread_mutexattr_t>
+    let mutexType: MutexType
 
     ///
-    public enum MutexType: Int32 {
-        ///
-        case normal = 0
-        ///
-        case recursive
+    public struct MutexType: Equatable {
+
+        let rawValue: Int32
+
+        /// normal type
+        public static let normal = MutexType(rawValue: Int32(PTHREAD_MUTEX_NORMAL))
+
+        /// recursive type
+        public static let recursive = MutexType(rawValue: Int32(PTHREAD_MUTEX_RECURSIVE))
+
+        // error check type
+        public static let error = MutexType(rawValue: Int32(PTHREAD_MUTEX_ERRORCHECK))
     }
 
     ///
     /// - Parameter type:
     public init(type: MutexType = .normal) {
+
+        mutexType = type
         mutex = UnsafeMutablePointer.allocate(capacity: 1)
         mutex.initialize(to: pthread_mutex_t())
         mutexAttr = UnsafeMutablePointer.allocate(capacity: 1)
         mutexAttr.initialize(to: pthread_mutexattr_t())
-        pthread_mutexattr_settype(mutexAttr, type.rawValue)
+        pthread_mutexattr_settype(mutexAttr, mutexType.rawValue)
+        pthread_mutexattr_init(mutexAttr)
         pthread_mutex_init(mutex, mutexAttr)
     }
 
@@ -49,21 +64,20 @@ public class Mutex {
     }
 
     /// Wait until lock becomes available, or specified time passes
-    public func tryLockUntil(forTimeInterval timeoutSeconds: TimeInterval) {
-        guard timeoutSeconds >= 0 else {
+    public func tryLockUntil(forTimeInterval timeout: Timeout) {
+        guard timeout.time >= 0 else {
             return
         }
 
         // convert argument passed into nanoseconds
         let nsecPerSec: Int64 = 1_000_000_000
-        let timeoutNS = Int64(timeoutSeconds * Double(nsecPerSec))
 
         // get the current time
         var curTime = timeval()
         gettimeofday(&curTime, nil)
 
         // calculate the timespec from the argument passed
-        let allNSecs: Int64 = timeoutNS + Int64(curTime.tv_usec) * 1000
+        let allNSecs: Int64 = timeout.timeoutIntoNS + Int64(curTime.tv_usec) * 1000
         var timeoutAbs = timespec(
             tv_sec: curTime.tv_sec + Int(allNSecs / nsecPerSec),
             tv_nsec: Int(allNSecs % nsecPerSec)

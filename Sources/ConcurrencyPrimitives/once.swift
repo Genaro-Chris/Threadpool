@@ -1,8 +1,14 @@
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#if canImport(Darwin)
     import Darwin
-#else
+#elseif canImport(Glibc)
     import Glibc
+#elseif canImport(Musl)
+    import Musl
+#else
+    #error("Unable to identify your underlying C library.")
 #endif
+
+import Foundation
 
 public typealias TaskItem = () -> Void
 
@@ -11,7 +17,7 @@ public typealias SendableTaskItem = @Sendable () -> Void
 ///
 public enum Once {
 
-    private static var once = pthread_once_t()
+    private static var once = PTHREAD_ONCE_INIT
 
     ///
     /// - Parameter body:

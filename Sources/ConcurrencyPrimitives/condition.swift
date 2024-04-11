@@ -1,9 +1,13 @@
 import Foundation
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#if canImport(Darwin)
     import Darwin
-#else
+#elseif canImport(Glibc)
     import Glibc
+#elseif canImport(Musl)
+    import Musl
+#else
+    #error("Unable to identify your underlying C library.")
 #endif
 
 ///
@@ -17,6 +21,7 @@ public final class Condition {
         condition.initialize(to: pthread_cond_t())
         conditionAttr = UnsafeMutablePointer.allocate(capacity: 1)
         conditionAttr.initialize(to: pthread_condattr_t())
+        pthread_condattr_init(conditionAttr)
         pthread_cond_init(condition, conditionAttr)
     }
 
@@ -31,34 +36,71 @@ public final class Condition {
     /// - Parameters:
     ///   - mutex:
     ///   - forTimeInterval:
-    public func wait(mutex: Mutex, forTimeInterval timeoutSeconds: TimeInterval) {
-        guard timeoutSeconds >= 0 else {
+    public func wait(mutex: Mutex, forTimeInterval timeoutSeconds: Timeout) {
+        guard timeoutSeconds.time >= 0 else {
             return
         }
 
-        mutex.tryLock()
+        if case .recursive = mutex.mutexType {
+            fatalError("Condition type should never be used with recursive mutexes")
+        }
 
-        // convert argument passed into nanoseconds
+        precondition(!mutex.tryLock(), "\(#function) must be called only while the mutex is locked")
+
+        // convert seconds into nanoseconds
         let nsecPerSec: Int64 = 1_000_000_000
-        let timeoutNS = Int64(timeoutSeconds * Double(nsecPerSec))
+        let timeoutNS = timeoutSeconds.timeoutIntoNS
 
-        // get the current clock id
-        var clockID = clockid_t()
-        pthread_condattr_getclock(conditionAttr, &clockID)
+        #if os(macOS) || canImport(Darwin)
 
-        // get the current time
-        var curTime = timespec(tv_sec: __time_t(0), tv_nsec: 0)
-        clock_gettime(clockID, &curTime)
+            var curTime = timeval()
+            // get the current time
+            gettimeofday(&curTime, nil)
 
-        // calculate the timespec from the argument passed
-        let allNSecs: Int64 = timeoutNS + Int64(curTime.tv_nsec) / nsecPerSec
-        var timeoutAbs = timespec(
-            tv_sec: curTime.tv_sec + Int(allNSecs / nsecPerSec),
-            tv_nsec: curTime.tv_nsec + Int(allNSecs % nsecPerSec)
-        )
+            let allNSecs: Int64 = timeoutNS + Int64(curTime.tv_usec) * 1000
+            // calculate the timespec from the argument passed
+            var timeoutAbs = timespec(
+                tv_sec: curTime.tv_sec + Int((allNSecs / nsecPerSec)),
+                tv_nsec: Int(allNSecs % nsecPerSec))
+            assert(timeoutAbs.tv_nsec >= 0 && timeoutAbs.tv_nsec < Int(nsecPerSec))
+            assert(timeoutAbs.tv_sec >= curTime.tv_sec)
+            while true {
+                switch pthread_cond_timedwait(self.cond, mutex, &timeoutAbs) {
+                case 0:
+                    continue
+                case ETIMEDOUT:
+                    self.unlock()
+                    return false
+                case let err:
+                    fatalError("caught error \(err) when calling pthread_cond_timedwait")
+                }
+            }
+        #else
+            pthread_condattr_setclock(conditionAttr, CLOCK_MONOTONIC)
 
-        // wait until the time passed as argument as elapsed
-        pthread_cond_timedwait(condition, mutex.mutex, &timeoutAbs)
+            // get the current clock id
+            var clockID = clockid_t(0)
+            pthread_condattr_getclock(conditionAttr, &clockID)
+
+            // get the current time
+            var curTime = timespec(tv_sec: 0, tv_nsec: 0)
+            clock_gettime(clockID, &curTime)
+
+            // calculate the timespec from the argument passed
+            let allNSecs: Int64 = timeoutNS + Int64(curTime.tv_nsec) / nsecPerSec
+            var timeoutAbs = timespec(
+                tv_sec: curTime.tv_sec + Int(allNSecs / nsecPerSec),
+                tv_nsec: curTime.tv_nsec + Int(allNSecs % nsecPerSec)
+            )
+
+            // wait until the time passed as argument as elapsed
+            switch pthread_cond_timedwait(condition, mutex.mutex, &timeoutAbs) {
+            case 0, ETIMEDOUT: ()
+            case let err:
+                fatalError("caught error \(err) when calling pthread_cond_timedwait")
+            }
+        #endif
+
     }
 
     /// Blocks the current thread until the condition return true
@@ -66,7 +108,10 @@ public final class Condition {
     ///   - mutex:
     ///   - condition:
     public func wait(mutex: Mutex, condition: @autoclosure () -> Bool) {
-        mutex.tryLock()
+        if case .recursive = mutex.mutexType {
+            fatalError("Condition type should never be used with recursive mutexes")
+        }
+        precondition(!mutex.tryLock(), "\(#function) must be called only while the mutex is locked")
         while !condition() {
             pthread_cond_wait(self.condition, mutex.mutex)
         }
@@ -76,7 +121,10 @@ public final class Condition {
     /// Blocks the current thread
     /// - Parameter mutex:
     public func wait(mutex: Mutex) {
-        mutex.tryLock()
+        if case .recursive = mutex.mutexType {
+            fatalError("Condition type should never be used with recursive mutexes")
+        }
+        precondition(!mutex.tryLock(), "\(#function) must be called only while the mutex is locked")
         pthread_cond_wait(condition, mutex.mutex)
     }
 

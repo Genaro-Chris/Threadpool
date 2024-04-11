@@ -52,5 +52,7 @@ public final class SingleThread: @unchecked Sendable {
             waitForAll()
             end()
         }
+
+        handle.join()
     }
 }

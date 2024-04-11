@@ -63,7 +63,7 @@ final class ThreadpoolTests: XCTestCase {
                     print("Thread \(index) done")
                 }
                 lock.whileLocked {
-                    condition.wait(mutex: lock, forTimeInterval: 2)
+                    condition.wait(mutex: lock, forTimeInterval: .microseconds(200))
                     if index % 5 == 0 {
                         condition.signal()
                     }
@@ -75,7 +75,7 @@ final class ThreadpoolTests: XCTestCase {
         threadHandles.forEach { $0.start() }
 
         lock.whileLocked {
-            condition.wait(mutex: lock, forTimeInterval: 4)
+            condition.wait(mutex: lock, forTimeInterval: .microseconds(400))
         }
 
         threadHandles.forEach { $0.cancel() }
@@ -189,7 +189,7 @@ final class ThreadpoolTests: XCTestCase {
             Thread.sleep(forTimeInterval: 10)
         }
 
-        mutex.tryLockUntil(forTimeInterval: 6)
+        mutex.tryLockUntil(forTimeInterval: .seconds(6))
 
         XCTAssertEqual(student.scores.count, 10)
         XCTAssertEqual(student.age, 18)
@@ -392,7 +392,7 @@ final class ThreadpoolTests: XCTestCase {
         var counter = 0
 
         do {
-            let pool = ThreadPool(count: 5, waitType: .cancelAll)
+            let pool = ThreadPool(count: 3, waitType: .cancelAll)
             XCTAssertNotNil(pool)
             let lock = Mutex()
             for index in 1 ... 10 {
@@ -439,6 +439,7 @@ final class ThreadpoolTests: XCTestCase {
                 pool.submit {
                     lock.whileLocked {
                         checks.append(Thread.current.description)
+                        Thread.sleep(forTimeInterval: 1)
                     }
                 }
             }
@@ -474,7 +475,7 @@ final class ThreadpoolTests: XCTestCase {
     func testThreadPoolDontWaitAtDeinit() {
         var counter = 0
         do {
-            let pool = ThreadPool(count: 5, waitType: .cancelAll)!
+            let pool = ThreadPool(count: 3, waitType: .cancelAll)!
             let lock = Mutex()
             for index in 1 ... 10 {
                 pool.submit {
@@ -490,7 +491,7 @@ final class ThreadpoolTests: XCTestCase {
     }
 
     func testSemaphore() {
-        let semaphore = LockBasedSemaphore(10)
+        let semaphore = LockBasedSemaphore(size: 10)
         for _ in 1 ... 10 {
             DispatchQueue.global().async {
                 defer { semaphore.decrement() }
