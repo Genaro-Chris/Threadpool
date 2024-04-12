@@ -1,3 +1,5 @@
+import Foundation
+
 #if canImport(Darwin)
     import Darwin
 #elseif canImport(Glibc)
@@ -8,8 +10,6 @@
     #error("Unable to identify your underlying C library.")
 #endif
 
-import Foundation
-
 public typealias TaskItem = () -> Void
 
 public typealias SendableTaskItem = @Sendable () -> Void
@@ -17,16 +17,18 @@ public typealias SendableTaskItem = @Sendable () -> Void
 ///
 public enum Once {
 
-    private static var once = pthread_once_t(0)
+    private static let once = Locked(false)
 
     ///
     /// - Parameter body:
     public static func runOnce(_ body: @escaping TaskItem) {
-        Self.queue <- body
-        pthread_once(&once) {
-            (<-Once.queue)?()
+        once.updateWhileLocked {
+            guard !$0 else {
+                return
+            }
+            $0 = true
+            body()
         }
-
     }
 
     private static let queue = ThreadSafeQueue<() -> Void>()
