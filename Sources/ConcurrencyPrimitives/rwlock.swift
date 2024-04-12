@@ -30,10 +30,10 @@ public final class RWLock: @unchecked Sendable {
         rwLockAttr.initialize(to: pthread_rwlockattr_t())
         rwLock = UnsafeMutablePointer.allocate(capacity: 1)
         rwLock.initialize(to: pthread_rwlock_t())
-        pthread_rwlock_init(rwLock, rwLockAttr)
         #if os(Linux)
             pthread_rwlockattr_setkind_np(rwLockAttr, preference.rawValue)
         #endif
+        pthread_rwlock_init(rwLock, rwLockAttr)
     }
 
     deinit {

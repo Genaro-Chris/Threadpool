@@ -10,7 +10,7 @@ class UniqueThread: Thread {
 
     let latch = Latch(count: 1)
 
-    let queue = UnboundedChannel<TaskItem>()
+    let queue = Channel<TaskItem>()
 
     func submit(_ body: @escaping TaskItem) {
         _ = queue.enqueue(body)

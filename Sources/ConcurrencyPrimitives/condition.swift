@@ -47,55 +47,14 @@ public final class Condition {
 
         precondition(!mutex.tryLock(), "\(#function) must be called only while the mutex is locked")
 
-        // convert seconds into nanoseconds
-        let nsecPerSec: Int64 = 1_000_000_000
-        let timeoutNS = timeoutSeconds.timeoutIntoNS
+        var timeoutAbs = getTimeSpec(with: timeoutSeconds)
 
-        #if os(macOS) || canImport(Darwin)
-
-            var curTime = timeval()
-            // get the current time
-            gettimeofday(&curTime, nil)
-
-            let allNSecs: Int64 = timeoutNS + Int64(curTime.tv_usec) * 1000
-            // calculate the timespec from the argument passed
-            var timeoutAbs = timespec(
-                tv_sec: curTime.tv_sec + Int((allNSecs / nsecPerSec)),
-                tv_nsec: Int(allNSecs % nsecPerSec))
-            assert(timeoutAbs.tv_nsec >= 0 && timeoutAbs.tv_nsec < Int(nsecPerSec))
-            assert(timeoutAbs.tv_sec >= curTime.tv_sec)
-            switch pthread_cond_timedwait(condition, mutex.mutex, &timeoutAbs) {
-            case 0, ETIMEDOUT:
-                return
-            case let err:
-                fatalError("caught error \(err) when calling pthread_cond_timedwait")
-            }
-
-        #else
-            pthread_condattr_setclock(conditionAttr, CLOCK_MONOTONIC)
-
-            // get the current clock id
-            var clockID = clockid_t(0)
-            pthread_condattr_getclock(conditionAttr, &clockID)
-
-            // get the current time
-            var curTime = timespec(tv_sec: 0, tv_nsec: 0)
-            clock_gettime(clockID, &curTime)
-
-            // calculate the timespec from the argument passed
-            let allNSecs: Int64 = timeoutNS + Int64(curTime.tv_nsec) / nsecPerSec
-            var timeoutAbs = timespec(
-                tv_sec: curTime.tv_sec + Int(allNSecs / nsecPerSec),
-                tv_nsec: curTime.tv_nsec + Int(allNSecs % nsecPerSec)
-            )
-
-            // wait until the time passed as argument as elapsed
-            switch pthread_cond_timedwait(condition, mutex.mutex, &timeoutAbs) {
-            case 0, ETIMEDOUT: ()
-            case let err:
-                fatalError("caught error \(err) when calling pthread_cond_timedwait")
-            }
-        #endif
+        switch pthread_cond_timedwait(condition, mutex.mutex, &timeoutAbs) {
+        case 0, ETIMEDOUT:
+            return
+        case let err:
+            fatalError("caught error \(err) when calling pthread_cond_timedwait")
+        }
 
     }
 

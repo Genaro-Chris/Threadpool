@@ -69,22 +69,9 @@ public class Mutex {
             return
         }
 
-        // convert argument passed into nanoseconds
-        let nsecPerSec: Int64 = 1_000_000_000
-
-        // get the current time
-        var curTime = timeval()
-        gettimeofday(&curTime, nil)
-
-        // calculate the timespec from the argument passed
-        let allNSecs: Int64 = timeout.timeoutIntoNS + Int64(curTime.tv_usec) * 1000
-        var timeoutAbs = timespec(
-            tv_sec: curTime.tv_sec + Int(allNSecs / nsecPerSec),
-            tv_nsec: Int(allNSecs % nsecPerSec)
-        )
-
-        // wait until the time passed as argument as elapsed
         #if os(Linux)
+            // wait until the time passed as argument as elapsed
+            var timeoutAbs = getTimeSpec(with: timeout)
             pthread_mutex_timedlock(mutex, &timeoutAbs)
         #endif
     }

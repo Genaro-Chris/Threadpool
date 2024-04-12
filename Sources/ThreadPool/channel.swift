@@ -1,22 +1,21 @@
 import ConcurrencyPrimitives
 
 @frozen
-public struct UnboundedChannel<Element> {
+public struct Channel<Element> {
 
-    @usableFromInline let storage: Storage<Element>
+    private let storage: _Storage<Element>
 
-    @usableFromInline let mutex: Mutex
+    private let mutex: Mutex
 
-    @usableFromInline let condition: Condition
+    private let condition: Condition
 
-    /// Initializes an instance of `UnboundedChannel` type
+    /// Initializes an instance of `Channel` type
     public init() {
-        storage = Storage()
+        storage = _Storage()
         mutex = Mutex()
         condition = Condition()
     }
 
-    @inlinable
     public func enqueue(_ item: Element) -> Bool {
         return mutex.whileLocked {
             guard !storage.closed else {
@@ -31,7 +30,6 @@ public struct UnboundedChannel<Element> {
         }
     }
 
-    @inlinable
     public func dequeue() -> Element? {
         mutex.whileLocked {
             guard !storage.closed else {
@@ -58,7 +56,7 @@ public struct UnboundedChannel<Element> {
     }
 }
 
-extension UnboundedChannel: IteratorProtocol, Sequence {
+extension Channel: IteratorProtocol, Sequence {
 
     public mutating func next() -> Element? {
         return dequeue()
@@ -66,7 +64,7 @@ extension UnboundedChannel: IteratorProtocol, Sequence {
 
 }
 
-extension UnboundedChannel {
+extension Channel {
 
     public var isClosed: Bool {
         return mutex.whileLocked {
