@@ -17,7 +17,7 @@ public typealias SendableTaskItem = @Sendable () -> Void
 ///
 public enum Once {
 
-    private static var once = 0 as pthread_once_t
+    private static var once = pthread_once_t(0)
 
     ///
     /// - Parameter body:
