@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-12, macos-13, macos-14, macos-latest]
-        swift: ["5.5.0", "5.6.0"]
+        swift: ["5.5", "5.6"]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -19,6 +19,6 @@ jobs:
           swift-version: ${{ matrix.swift }}
       - uses: actions/checkout@v3
       - name: Build
-        run: /usr/bin/xcrun --toolchain swift ${{ matrix.swift }} --run swift build
+        run: xcrun --toolchain swift --run swift build
       - name: Run tests
-        run: /usr/bin/xcrun --toolchain swift ${{ matrix.swift }} --run swift test
+        run: xcrun --toolchain swift --run swift test
