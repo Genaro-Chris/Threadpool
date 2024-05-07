@@ -19,6 +19,6 @@ jobs:
           swift-version: ${{ matrix.swift }}
       - uses: actions/checkout@v3
       - name: Build
-        run: swift build
+        run: /usr/bin/xcrun --toolchain swift ${{ matrix.swift }} --run swift build
       - name: Run tests
-        run: swift test
+        run: /usr/bin/xcrun --toolchain swift ${{ matrix.swift }} --run swift test
