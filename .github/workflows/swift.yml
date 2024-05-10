@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-12, macos-13, macos-14, macos-latest]
-        swift: ["5.5", "5.6", "5.7"]
+        swift: ["5.5.3", "5.6.3", "5.7.3"]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
