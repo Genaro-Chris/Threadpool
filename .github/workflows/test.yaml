@@ -17,10 +17,10 @@ jobs:
             sudo xcode-select -s /Applications/Xcode_13.1.app
             xcodebuild -version
             swift --version
-        - name: Swift Version
-          run: swift --version
-        - name: Test (release)
-          run: swift test --configuration release -Xswiftc -enable-testing
+        - name: Swift Build
+          run: swift build --build-tests
+        - name: Swift Test
+          run: swift test -Xswiftc -enable-testing
 
     macOS-swift56:
         name: macOS (Swift 5.6)
@@ -35,14 +35,14 @@ jobs:
             sudo xcode-select -s /Applications/Xcode_13.4.1.app
             xcodebuild -version
             swift --version
-        - name: Swift Version
-          run: swift --version
-        - name: Test (release)
-          run: swift test --configuration release -Xswiftc -enable-testing
+        - name: Swift Build
+          run: swift build --build-tests
+        - name: Swift Test
+          run: swift test -Xswiftc -enable-testing
 
     macOS-swift57:
         name: macOS (Swift 5.7)
-        timeout-minutes: 330
+        timeout-minutes: 30
         env:
             TOOLCHAINS: swift
         runs-on: macos-12
@@ -68,7 +68,7 @@ jobs:
           run: |
             xcodebuild -version
             xcrun swift --version
-        - name: Swift Version
-          run: swift --version
-        - name: Test (release)
-          run: export PATH="swift-latest:$PATH"; swift test --configuration release -Xswiftc -enable-testing
+        - name: Swift Build
+          run: swift build --build-tests
+        - name: Swift Test
+          run: export PATH="swift-latest:$PATH"; swift test -Xswiftc -enable-testing
