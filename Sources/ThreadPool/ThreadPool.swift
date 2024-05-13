@@ -65,6 +65,5 @@ public final class ThreadPool: @unchecked Sendable {
             waitForAll()
             end()
         }
-        threadHandles.forEach { $0.join() }
     }
 }

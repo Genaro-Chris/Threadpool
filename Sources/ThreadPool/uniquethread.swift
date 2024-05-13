@@ -8,8 +8,6 @@ public typealias SendableTaskItem = @Sendable () -> Void
 
 class UniqueThread: Thread {
 
-    let latch = Latch(count: 1)
-
     let queue = Channel<TaskItem>()
 
     func submit(_ body: @escaping TaskItem) {
@@ -18,15 +16,10 @@ class UniqueThread: Thread {
 
     override func main() {
         while !self.isCancelled {
-            for work in queue {
+            if let work = queue.next() {
                 work()
             }
         }
-        latch?.decrementAlone()
-    }
-
-    func join() {
-        latch?.waitForAll()
     }
 
     override func cancel() {

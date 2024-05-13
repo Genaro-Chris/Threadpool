@@ -53,6 +53,5 @@ public final class SingleThread: @unchecked Sendable {
             end()
         }
 
-        handle.join()
     }
 }
