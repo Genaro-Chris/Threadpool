@@ -107,6 +107,7 @@ final class ThreadpoolTests: XCTestCase {
         let barrier = Barrier(count: 3)
         XCTAssertNotNil(barrier)
         let mutex = Mutex()
+        var total = 0
         for index in 1 ... 10 {
             Thread {
                 barrier?.arriveAndWait()
