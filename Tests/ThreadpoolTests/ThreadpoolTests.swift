@@ -104,18 +104,18 @@ final class ThreadpoolTests: XCTestCase {
     }
 
     func testThreadBlocker() {
-        let queue = Barrier(count: 3)
-        XCTAssertNotNil(queue)
-        var total = 0
+        let barrier = Barrier(count: 3)
+        XCTAssertNotNil(barrier)
         let mutex = Mutex()
         for index in 1 ... 10 {
             Thread {
-                queue?.arriveAndWait()
+                barrier?.arriveAndWait()
                 mutex.whileLocked {
                     total += index
                 }
             }.start()
         }
+        Thread.sleep(forTimeInterval: 0.8)
         mutex.whileLocked {
             XCTAssertNotEqual(total, 0)
         }
