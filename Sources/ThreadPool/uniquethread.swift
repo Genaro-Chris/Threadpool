@@ -16,7 +16,7 @@ class UniqueThread: Thread {
 
     override func main() {
         while !self.isCancelled {
-            if let work = queue.next() {
+            if let work = queue.dequeue() {
                 work()
             }
         }

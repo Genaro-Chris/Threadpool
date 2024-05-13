@@ -56,14 +56,6 @@ public struct Channel<Element> {
     }
 }
 
-extension Channel: IteratorProtocol, Sequence {
-
-    public mutating func next() -> Element? {
-        return dequeue()
-    }
-
-}
-
 extension Channel {
 
     public var isClosed: Bool {
