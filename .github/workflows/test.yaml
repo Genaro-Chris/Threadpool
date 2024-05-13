@@ -10,6 +10,7 @@ on: [push, pull_request]
 jobs:
     macOS-swift56:
         name: macOS (Swift 5.6)
+        timeout-minutes: 30
         runs-on: macos-12
         steps:
         - name: Checkout
@@ -27,6 +28,7 @@ jobs:
 
     macOS-swift57:
         name: macOS (Swift 5.7)
+        timeout-minutes: 330
         env:
             TOOLCHAINS: swift
         runs-on: macos-12
